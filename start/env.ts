@@ -18,4 +18,13 @@ export default await Env.create(new URL('../', import.meta.url), {
   APP_URL: Env.schema.string({ format: 'url', tld: false }),
   HOST: Env.schema.string({ format: 'host' }),
   LOG_LEVEL: Env.schema.string(),
+  JWT_SECRET: Env.schema.string(),
+  JWT_EXPIRES_IN: Env.schema.string(),
+  DB_HOST: Env.schema.string(),
+  DB_PORT: Env.schema.number(),
+  DB_USER: Env.schema.string(),
+  DB_PASSWORD: Env.schema.string(),
+  DB_NAME: Env.schema.string(),
+  DB_SYNCHRONIZE: Env.schema.boolean(),
+  DB_LOGGING: Env.schema.boolean(),
 })
