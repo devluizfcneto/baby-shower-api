@@ -3,7 +3,9 @@ import { join } from 'node:path'
 
 import env from '#start/env'
 
+import { Companion } from '../app/entities/companion.js'
 import { Event } from '../app/entities/event.js'
+import { Guest } from '../app/entities/guest.js'
 import { UserSession } from '../app/entities/user_session.js'
 import { User } from '../app/entities/user.js'
 
@@ -14,9 +16,9 @@ const databaseConfig: DataSourceOptions = {
   username: env.get('DB_USER'),
   password: env.get('DB_PASSWORD'),
   database: env.get('DB_NAME'),
-  synchronize: env.get('NODE_ENV') === 'production' ? false : env.get('DB_SYNCHRONIZE'),
+  synchronize: false,
   logging: env.get('DB_LOGGING'),
-  entities: [User, Event, UserSession],
+  entities: [User, Event, UserSession, Guest, Companion],
   migrations: [
     join(process.cwd(), 'database/migrations/*.{ts,js}'),
     join(process.cwd(), 'build/database/migrations/*.js'),
