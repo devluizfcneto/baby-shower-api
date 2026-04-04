@@ -6,8 +6,9 @@ import { EventService } from '#services/event_service'
 test.group('EventService', () => {
   test('maps entity to stable public DTO', async ({ assert }) => {
     const service = new EventService({
-      findLatestPublicEvent: async () => ({
+      findPublicEventByCode: async () => ({
         id: 1,
+        code: 'babyshower2026event1',
         name: 'Cha da Helena',
         date: new Date('2026-06-18T15:00:00.000Z'),
         venueAddress: 'Rua Exemplo, 123 - Sao Paulo/SP',
@@ -21,7 +22,7 @@ test.group('EventService', () => {
       }),
     } as any)
 
-    const response = await service.getPublicEvent()
+    const response = await service.getPublicEvent('babyshower2026event1')
 
     assert.deepEqual(response, {
       data: {
@@ -48,10 +49,10 @@ test.group('EventService', () => {
   })
 
   test('throws EVENT_NOT_FOUND when no event exists', async ({ assert }) => {
-    const service = new EventService({ findLatestPublicEvent: async () => null } as any)
+    const service = new EventService({ findPublicEventByCode: async () => null } as any)
 
     try {
-      await service.getPublicEvent()
+      await service.getPublicEvent('missingcode')
       assert.fail('Expected EventNotFoundException to be thrown')
     } catch (error) {
       assert.instanceOf(error, EventNotFoundException)
@@ -61,13 +62,13 @@ test.group('EventService', () => {
 
   test('throws EVENT_FETCH_FAILED when repository fails', async ({ assert }) => {
     const service = new EventService({
-      findLatestPublicEvent: async () => {
+      findPublicEventByCode: async () => {
         throw new Error('db down')
       },
     } as any)
 
     try {
-      await service.getPublicEvent()
+      await service.getPublicEvent('babyshower2026event1')
       assert.fail('Expected EventFetchFailedException to be thrown')
     } catch (error) {
       assert.instanceOf(error, EventFetchFailedException)

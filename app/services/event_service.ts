@@ -25,11 +25,11 @@ type PublicEventResponse = {
 export class EventService {
   constructor(private readonly eventRepository: EventRepository = new EventRepository()) {}
 
-  async getPublicEvent(): Promise<PublicEventResponse> {
+  async getPublicEvent(eventCode: string): Promise<PublicEventResponse> {
     let event: EventPublicProjection | null
 
     try {
-      event = await this.eventRepository.findLatestPublicEvent()
+      event = await this.eventRepository.findPublicEventByCode(eventCode)
     } catch {
       throw new EventFetchFailedException()
     }

@@ -8,6 +8,7 @@ export class CreateEventsTable1710000000000 implements MigrationInterface {
       CREATE TABLE IF NOT EXISTS events (
         id SERIAL PRIMARY KEY,
         name VARCHAR(200) NOT NULL,
+        code VARCHAR(20) NOT NULL UNIQUE DEFAULT SUBSTRING(MD5(RANDOM()::text), 1, 20),
         date TIMESTAMP NOT NULL,
         venue_address TEXT NOT NULL,
         delivery_address TEXT NULL,

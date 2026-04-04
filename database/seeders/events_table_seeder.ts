@@ -15,6 +15,7 @@ export default class EventsTableSeeder implements Seeder {
     }
 
     const event = eventRepository.create({
+      code: 'babyshower2026event1',
       name: 'Cha de bebe da Maria',
       date: new Date('2026-08-15T15:00:00.000Z'),
       venueAddress: 'Rua das Flores, 100 - Centro',

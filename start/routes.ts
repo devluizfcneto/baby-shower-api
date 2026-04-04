@@ -14,7 +14,7 @@ const AuthController = () => import('#controllers/auth_controller')
 const EventController = () => import('#controllers/event_controller')
 
 router.get('/', async () => 'It works!')
-router.get('/api/event', [EventController, 'showPublic'])
+router.get('/api/event/:eventCode', [EventController, 'showPublic'])
 
 router
   .group(() => {

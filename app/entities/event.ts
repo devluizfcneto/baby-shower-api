@@ -1,4 +1,12 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm'
+import { randomBytes } from 'node:crypto'
+import {
+  BeforeInsert,
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm'
 
 @Entity({ name: 'events' })
 export class Event {
@@ -7,6 +15,14 @@ export class Event {
 
   @Column({ type: 'varchar', length: 200 })
   declare name: string
+
+  @Column({
+    type: 'varchar',
+    length: 20,
+    unique: true,
+    default: () => 'SUBSTRING(MD5(RANDOM()::text), 1, 20)',
+  })
+  declare code: string
 
   @Column({ type: 'timestamp' })
   declare date: Date
@@ -40,4 +56,11 @@ export class Event {
 
   @UpdateDateColumn({ name: 'updated_at' })
   declare updatedAt: Date
+
+  @BeforeInsert()
+  assignCode() {
+    if (!this.code) {
+      this.code = randomBytes(10).toString('hex')
+    }
+  }
 }

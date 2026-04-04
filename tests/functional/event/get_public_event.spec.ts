@@ -12,11 +12,12 @@ test.group('GET /api/event', (group) => {
   })
 
   group.each.setup(async () => {
-    await AppDataSource.getRepository(Event).clear()
+    await AppDataSource.query('TRUNCATE TABLE companions, guests, events RESTART IDENTITY CASCADE')
   })
 
   test('returns 200 with public event payload when event exists', async ({ client, assert }) => {
-    await AppDataSource.getRepository(Event).save({
+    const event = await AppDataSource.getRepository(Event).save({
+      code: 'evttestevent001',
       name: 'Cha da Helena',
       date: new Date('2026-06-18T15:00:00.000Z'),
       venueAddress: 'Rua Exemplo, 123 - Sao Paulo/SP',
@@ -29,7 +30,7 @@ test.group('GET /api/event', (group) => {
       pixQrcodeMom: null,
     })
 
-    const response = await client.get('/api/event')
+    const response = await client.get(`/api/event/${event.code}`)
 
     response.assertStatus(200)
     const body = response.body()
@@ -39,7 +40,7 @@ test.group('GET /api/event', (group) => {
   })
 
   test('returns 404 with EVENT_NOT_FOUND when no event exists', async ({ client }) => {
-    const response = await client.get('/api/event')
+    const response = await client.get('/api/event/missingeventcode')
 
     response.assertStatus(404)
     response.assertBodyContains({
@@ -53,13 +54,13 @@ test.group('GET /api/event', (group) => {
   })
 
   test('returns 500 with EVENT_FETCH_FAILED when repository fails', async ({ client }) => {
-    const originalMethod = EventRepository.prototype.findLatestPublicEvent
-    EventRepository.prototype.findLatestPublicEvent = async () => {
+    const originalMethod = EventRepository.prototype.findPublicEventByCode
+    EventRepository.prototype.findPublicEventByCode = async () => {
       throw new Error('forced failure')
     }
 
     try {
-      const response = await client.get('/api/event')
+      const response = await client.get('/api/event/babyshower2026event1')
       response.assertStatus(500)
       response.assertBodyContains({
         errors: [
@@ -69,12 +70,19 @@ test.group('GET /api/event', (group) => {
         ],
       })
     } finally {
-      EventRepository.prototype.findLatestPublicEvent = originalMethod
+      EventRepository.prototype.findPublicEventByCode = originalMethod
     }
   })
 
+  test('returns 404 when eventCode path param is missing', async ({ client }) => {
+    const response = await client.get('/api/event')
+
+    response.assertStatus(404)
+  })
+
   test('executes only one SQL query per request', async ({ client, assert }) => {
-    await AppDataSource.getRepository(Event).save({
+    const event = await AppDataSource.getRepository(Event).save({
+      code: 'evttestevent001',
       name: 'Cha da Helena',
       date: new Date('2026-06-18T15:00:00.000Z'),
       venueAddress: 'Rua Exemplo, 123 - Sao Paulo/SP',
@@ -110,7 +118,7 @@ test.group('GET /api/event', (group) => {
     }
 
     try {
-      const response = await client.get('/api/event')
+      const response = await client.get(`/api/event/${event.code}`)
       response.assertStatus(200)
       assert.equal(queryCount, 1)
     } finally {
@@ -119,7 +127,8 @@ test.group('GET /api/event', (group) => {
   })
 
   test('keeps p95 latency at or below 250ms in light local load', async ({ client, assert }) => {
-    await AppDataSource.getRepository(Event).save({
+    const event = await AppDataSource.getRepository(Event).save({
+      code: 'evttestevent001',
       name: 'Cha da Helena',
       date: new Date('2026-06-18T15:00:00.000Z'),
       venueAddress: 'Rua Exemplo, 123 - Sao Paulo/SP',
@@ -136,7 +145,7 @@ test.group('GET /api/event', (group) => {
 
     for (let i = 0; i < 30; i++) {
       const start = performance.now()
-      const response = await client.get('/api/event')
+      const response = await client.get(`/api/event/${event.code}`)
       response.assertStatus(200)
       durations.push(performance.now() - start)
     }

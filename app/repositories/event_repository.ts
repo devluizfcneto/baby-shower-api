@@ -6,6 +6,7 @@ import { Event } from '../entities/event.js'
 export type EventPublicProjection = Pick<
   Event,
   | 'id'
+  | 'code'
   | 'name'
   | 'date'
   | 'venueAddress'
@@ -23,11 +24,12 @@ export class EventRepository {
     private readonly repository: Repository<Event> = AppDataSource.getRepository(Event)
   ) {}
 
-  async findLatestPublicEvent(): Promise<EventPublicProjection | null> {
+  async findPublicEventByCode(eventCode: string): Promise<EventPublicProjection | null> {
     return this.repository
       .createQueryBuilder('event')
       .select([
         'event.id',
+        'event.code',
         'event.name',
         'event.date',
         'event.venueAddress',
@@ -39,8 +41,17 @@ export class EventRepository {
         'event.pixQrcodeDad',
         'event.pixQrcodeMom',
       ])
-      .orderBy('event.id', 'DESC')
-      .limit(1)
+      .where('event.code = :eventCode', { eventCode })
       .getOne()
+  }
+
+  async findEventIdByCode(eventCode: string): Promise<number | null> {
+    const result = await this.repository
+      .createQueryBuilder('event')
+      .select('event.id', 'id')
+      .where('event.code = :eventCode', { eventCode })
+      .getRawOne<{ id: number }>()
+
+    return result?.id ?? null
   }
 }
