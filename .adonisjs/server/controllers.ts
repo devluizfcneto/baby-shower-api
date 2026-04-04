@@ -5,4 +5,5 @@
 
 export const controllers = {
   Auth: () => import('#controllers/auth_controller'),
+  Event: () => import('#controllers/event_controller'),
 }
