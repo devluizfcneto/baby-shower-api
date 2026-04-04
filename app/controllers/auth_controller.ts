@@ -1,27 +1,32 @@
 import hash from '@adonisjs/core/services/hash'
 import type { HttpContext } from '@adonisjs/core/http'
-import jwt, { type JwtPayload } from 'jsonwebtoken'
-import type { Secret, SignOptions } from 'jsonwebtoken'
+import { randomUUID } from 'node:crypto'
 
 import { ErrorCode } from '#constants/error_code'
-import { AppException } from '#exceptions/app_exception'
 import {
   ConflictException,
   NotFoundException,
   UnauthorizedException,
 } from '#exceptions/http_exceptions'
-import env from '#start/env'
 import { AppDataSource } from '#services/database_service'
+import { JwtTokenService } from '#services/jwt_token_service'
 import { loginValidator, registerValidator } from '#validators/auth_validator'
+import { logoutSessionValidator, refreshSessionValidator } from '#validators/auth_session_validator'
+import { UserSessionService } from '#services/user_session_service'
 
 import { User } from '../entities/user.js'
 
-type AuthPayload = JwtPayload & {
-  sub: number
+type AuthPayload = {
+  userId: number
   email: string
 }
 
 export default class AuthController {
+  constructor(
+    private readonly jwtTokenService: JwtTokenService = new JwtTokenService(),
+    private readonly userSessionService: UserSessionService = new UserSessionService()
+  ) {}
+
   async register({ request, response }: HttpContext) {
     const { name, email, password } = await registerValidator.validate(request.all())
 
@@ -47,11 +52,11 @@ export default class AuthController {
 
     return response.created({
       user: this.toPublicUser(user),
-      token: this.signToken(user),
     })
   }
 
-  async login({ request, response }: HttpContext) {
+  async login(ctx: HttpContext) {
+    const { request, response } = ctx
     const { email, password } = await loginValidator.validate(request.all())
 
     const userRepository = AppDataSource.getRepository(User)
@@ -71,57 +76,137 @@ export default class AuthController {
       throw UnauthorizedException.single('Invalid credentials', ErrorCode.INVALID_CREDENTIALS)
     }
 
-    return response.ok({
-      user: this.toPublicUser(user),
-      token: this.signToken(user),
-    })
+    const tokens = await this.issueSessionTokens(user, ctx)
+
+    return response.ok({ user: this.toPublicUser(user), ...tokens })
   }
 
-  async me({ request, response }: HttpContext) {
-    const authHeader = request.header('authorization')
+  async show(ctx: HttpContext) {
+    const authPayload = (ctx as HttpContext & { authPayload?: AuthPayload }).authPayload
 
-    if (!authHeader?.startsWith('Bearer ')) {
+    if (!authPayload) {
       throw UnauthorizedException.single(
-        'Missing bearer token',
-        ErrorCode.MISSING_BEARER_TOKEN,
+        'Missing authentication context',
+        ErrorCode.UNAUTHORIZED,
         'authorization'
       )
     }
 
-    const token = authHeader.slice(7)
+    const userRepository = AppDataSource.getRepository(User)
+    const user = await userRepository.findOne({ where: { id: authPayload.userId } })
 
+    if (!user) {
+      throw NotFoundException.single('User not found', ErrorCode.USER_NOT_FOUND)
+    }
+
+    return ctx.response.ok({ user: this.toPublicUser(user) })
+  }
+
+  async refresh(ctx: HttpContext) {
+    const { refreshToken } = await refreshSessionValidator.validate(ctx.request.all())
+
+    let payload: ReturnType<JwtTokenService['verifyRefreshToken']>
     try {
-      const payload = jwt.verify(token, env.get('JWT_SECRET')) as AuthPayload
-
-      const userRepository = AppDataSource.getRepository(User)
-      const user = await userRepository.findOne({ where: { id: payload.sub } })
-
-      if (!user) {
-        throw NotFoundException.single('User not found', ErrorCode.USER_NOT_FOUND)
-      }
-
-      return response.ok({ user: this.toPublicUser(user) })
-    } catch (error) {
-      if (error instanceof AppException) {
-        throw error
-      }
-
+      payload = this.jwtTokenService.verifyRefreshToken(refreshToken)
+    } catch {
       throw UnauthorizedException.single(
         'Invalid or expired token',
         ErrorCode.INVALID_OR_EXPIRED_TOKEN,
+        'refreshToken'
+      )
+    }
+
+    const session = await this.userSessionService.verifySession(payload.sid, refreshToken)
+
+    if (!session) {
+      throw UnauthorizedException.single(
+        'Invalid or expired token',
+        ErrorCode.INVALID_OR_EXPIRED_TOKEN,
+        'refreshToken'
+      )
+    }
+
+    const userRepository = AppDataSource.getRepository(User)
+    const user = await userRepository.findOne({ where: { id: Number(payload.sub) } })
+
+    if (!user) {
+      throw NotFoundException.single('User not found', ErrorCode.USER_NOT_FOUND)
+    }
+
+    const accessToken = this.jwtTokenService.signAccessToken({
+      sub: user.id,
+      email: user.email,
+    })
+
+    return ctx.response.ok({ accessToken })
+  }
+
+  async logout(ctx: HttpContext) {
+    const { refreshToken } = await logoutSessionValidator.validate(ctx.request.all())
+
+    let payload: ReturnType<JwtTokenService['verifyRefreshToken']>
+    try {
+      payload = this.jwtTokenService.verifyRefreshToken(refreshToken)
+    } catch {
+      throw UnauthorizedException.single(
+        'Invalid or expired token',
+        ErrorCode.INVALID_OR_EXPIRED_TOKEN,
+        'refreshToken'
+      )
+    }
+
+    const authPayload = (ctx as HttpContext & { authPayload?: AuthPayload }).authPayload
+    if (!authPayload || authPayload.userId !== Number(payload.sub)) {
+      throw UnauthorizedException.single('Invalid credentials', ErrorCode.INVALID_CREDENTIALS)
+    }
+
+    await this.userSessionService.revokeSession(payload.sid)
+
+    return ctx.response.ok({ message: 'Session revoked successfully' })
+  }
+
+  async logoutAll(ctx: HttpContext) {
+    const authPayload = (ctx as HttpContext & { authPayload?: AuthPayload }).authPayload
+
+    if (!authPayload) {
+      throw UnauthorizedException.single(
+        'Missing authentication context',
+        ErrorCode.UNAUTHORIZED,
         'authorization'
       )
     }
+
+    await this.userSessionService.revokeAllUserSessions(authPayload.userId)
+
+    return ctx.response.ok({ message: 'All sessions revoked successfully' })
   }
 
-  private signToken(user: User) {
-    const secret = env.get('JWT_SECRET') as Secret
-    const expiresIn = env.get('JWT_EXPIRES_IN') as SignOptions['expiresIn']
-
-    return jwt.sign({ email: user.email }, secret, {
-      subject: String(user.id),
-      expiresIn,
+  private async issueSessionTokens(user: User, ctx: HttpContext) {
+    const sessionId = randomUUID()
+    const refreshToken = this.jwtTokenService.signRefreshToken({
+      sub: user.id,
+      email: user.email,
+      sessionId,
     })
+
+    await this.userSessionService.createSession({
+      sessionId,
+      userId: user.id,
+      refreshToken,
+      expiresAt: this.jwtTokenService.getRefreshTokenExpirationDate(),
+      userAgent: ctx.request.header('user-agent') ?? null,
+      ipAddress: ctx.request.ip(),
+    })
+
+    const accessToken = this.jwtTokenService.signAccessToken({
+      sub: user.id,
+      email: user.email,
+    })
+
+    return {
+      accessToken,
+      refreshToken,
+    }
   }
 
   private toPublicUser(user: User) {

@@ -1,34 +1,50 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import type { NextFn } from '@adonisjs/core/types/http'
-import jwt from 'jsonwebtoken'
 
 import { ErrorCode } from '#constants/error_code'
 import { UnauthorizedException } from '#exceptions/http_exceptions'
-import env from '#start/env'
+import { JwtTokenService } from '#services/jwt_token_service'
+
+interface AuthPayload {
+  userId: number
+  email: string
+}
 
 export default class AuthMiddleware {
-  async handle({ request }: HttpContext, next: NextFn) {
-    const authHeader = request.header('authorization')
+  constructor(private readonly jwtTokenService: JwtTokenService = new JwtTokenService()) {}
 
-    if (!authHeader?.startsWith('Bearer ')) {
+  async handle(ctx: HttpContext, next: NextFn) {
+    const authHeader = ctx.request.header('authorization')
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw UnauthorizedException.single(
-        'Missing bearer token',
+        'Token not found or invalid format',
         ErrorCode.MISSING_BEARER_TOKEN,
         'authorization'
       )
     }
 
-    const token = authHeader.slice(7)
+    const [, token] = authHeader.split(' ')
 
     try {
-      jwt.verify(token, env.get('JWT_SECRET'))
+      const payload = this.jwtTokenService.verifyAccessToken(token)
+      this.attachUserToContext(ctx, payload)
       return next()
-    } catch {
+    } catch (error) {
       throw UnauthorizedException.single(
-        'Invalid or expired token',
+        'Invalid token or session expired',
         ErrorCode.INVALID_OR_EXPIRED_TOKEN,
         'authorization'
       )
+    }
+  }
+
+  private attachUserToContext(ctx: HttpContext, payload: { sub: string; email: string }) {
+    const extendedContext = ctx as HttpContext & { authPayload: AuthPayload }
+
+    extendedContext.authPayload = {
+      userId: Number(payload.sub),
+      email: payload.email,
     }
   }
 }
