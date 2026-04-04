@@ -1,6 +1,6 @@
 import { ErrorCode } from '#constants/error_code'
 
-import { InternalServerException, NotFoundException } from './http_exceptions.js'
+import { ConflictException, InternalServerException, NotFoundException } from './http_exceptions.js'
 
 export class EventNotFoundException extends NotFoundException {
   constructor(message = 'Em breve!') {
@@ -13,5 +13,26 @@ export class EventFetchFailedException extends InternalServerException {
   constructor(message = 'Nao foi possivel carregar as informacoes do evento agora.') {
     super([{ code: ErrorCode.EVENT_FETCH_FAILED, message }])
     this.name = 'EventFetchFailedException'
+  }
+}
+
+export class RsvpEventUnavailableException extends NotFoundException {
+  constructor(message = 'Evento indisponivel para confirmacao no momento.') {
+    super([{ code: ErrorCode.RSVP_EVENT_UNAVAILABLE, message }])
+    this.name = 'RsvpEventUnavailableException'
+  }
+}
+
+export class RsvpAlreadyConfirmedException extends ConflictException {
+  constructor(message = 'Presence already confirmed for this email.') {
+    super([{ code: ErrorCode.RSVP_ALREADY_CONFIRMED, message, field: 'email' }])
+    this.name = 'RsvpAlreadyConfirmedException'
+  }
+}
+
+export class RsvpPersistFailedException extends InternalServerException {
+  constructor(message = 'Could not confirm presence right now.') {
+    super([{ code: ErrorCode.RSVP_PERSIST_FAILED, message }])
+    this.name = 'RsvpPersistFailedException'
   }
 }

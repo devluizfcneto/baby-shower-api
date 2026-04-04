@@ -12,6 +12,7 @@ import { middleware } from '#start/kernel'
 
 const AuthController = () => import('#controllers/auth_controller')
 const EventController = () => import('#controllers/event_controller')
+const RsvpController = () => import('#controllers/rsvp_controller')
 
 router.get('/', async () => 'It works!')
 router.get('/api/event/:eventCode', [EventController, 'showPublic'])
@@ -26,3 +27,5 @@ router
     router.post('/logout-all', [AuthController, 'logoutAll']).use(middleware.auth())
   })
   .prefix('/api/auth')
+
+router.post('/api/rsvp/:eventCode', [RsvpController, 'store'])
