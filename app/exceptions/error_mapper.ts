@@ -12,7 +12,7 @@ type VineLikeMessage = {
 type HttpErrorLike = Error & {
   status?: number
   code?: string
-  messages?: VineLikeMessage[]
+  messages?: VineLikeMessage[] | { errors?: VineLikeMessage[] }
 }
 
 function statusCodeToAppCode(status: number): string {
@@ -46,6 +46,24 @@ export function mapValidationMessages(messages: VineLikeMessage[] | undefined): 
   }))
 }
 
+function normalizeValidationMessages(
+  messages: HttpErrorLike['messages']
+): VineLikeMessage[] | undefined {
+  if (!messages) {
+    return undefined
+  }
+
+  if (Array.isArray(messages)) {
+    return messages
+  }
+
+  if (Array.isArray(messages.errors)) {
+    return messages.errors
+  }
+
+  return undefined
+}
+
 export function mapUnknownErrorToAppResponse(
   error: unknown,
   debugEnabled: boolean
@@ -72,7 +90,7 @@ export function mapUnknownErrorToAppResponse(
     return {
       status: 422,
       payload: {
-        errors: mapValidationMessages(httpError.messages),
+        errors: mapValidationMessages(normalizeValidationMessages(httpError.messages)),
       },
     }
   }
