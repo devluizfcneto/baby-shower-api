@@ -52,6 +52,7 @@
   },
   "dependencies": {
     "@adonisjs/core": "^7.3.0",
+    "@vinejs/vine": "^4.3.0",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.20.0",
     "reflect-metadata": "^0.2.2",
