@@ -12,10 +12,12 @@ import { middleware } from '#start/kernel'
 
 const AuthController = () => import('#controllers/auth_controller')
 const EventController = () => import('#controllers/event_controller')
+const GiftController = () => import('#controllers/gift_controller')
 const RsvpController = () => import('#controllers/rsvp_controller')
 
 router.get('/', async () => 'It works!')
 router.get('/api/event/:eventCode', [EventController, 'showPublic'])
+router.get('/api/gifts/:eventCode', [GiftController, 'indexPublic'])
 
 router
   .group(() => {
