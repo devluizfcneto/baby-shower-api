@@ -7,5 +7,6 @@ export const controllers = {
   Auth: () => import('#controllers/auth_controller'),
   Event: () => import('#controllers/event_controller'),
   Gift: () => import('#controllers/gift_controller'),
+  PurchaseConfirmation: () => import('#controllers/purchase_confirmation_controller'),
   Rsvp: () => import('#controllers/rsvp_controller'),
 }

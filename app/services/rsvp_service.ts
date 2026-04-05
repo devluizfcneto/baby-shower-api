@@ -9,6 +9,7 @@ import {
 import { validationError } from '#exceptions/error_factory'
 import { EventRepository } from '#repositories/event_repository'
 import { GuestRepository } from '#repositories/guest_repository'
+import { BestEffortNotificationService } from '#services/best_effort_notification_service'
 import { CompanionRepository, type CompanionCreateInput } from '#repositories/companion_repository'
 import { AppDataSource } from '#services/database_service'
 import { RsvpNotificationService } from '#services/rsvp_notification_service'
@@ -42,7 +43,9 @@ export class RsvpService {
     private readonly eventRepository: EventRepository = new EventRepository(),
     private readonly guestRepository: GuestRepository = new GuestRepository(),
     private readonly companionRepository: CompanionRepository = new CompanionRepository(),
-    private readonly notificationService: RsvpNotificationService = new RsvpNotificationService()
+    private readonly notificationService: RsvpNotificationService = new RsvpNotificationService(),
+    private readonly bestEffortNotificationService: BestEffortNotificationService =
+      new BestEffortNotificationService()
   ) {}
 
   async confirmPresence(
@@ -138,19 +141,20 @@ export class RsvpService {
     }>
     confirmedAt: Date
   }) {
-    const results = await Promise.allSettled([
-      this.notificationService.sendGuestConfirmation(payload),
-      this.notificationService.sendAdminNotification(payload),
-      ...payload.companions.map((companion) =>
-        this.notificationService.sendCompanionConfirmation(payload, companion)
-      ),
+    await this.bestEffortNotificationService.dispatch('rsvp_notification', [
+      {
+        label: 'guest_confirmation',
+        execute: () => this.notificationService.sendGuestConfirmation(payload),
+      },
+      {
+        label: 'admin_notification',
+        execute: () => this.notificationService.sendAdminNotification(payload),
+      },
+      ...payload.companions.map((companion) => ({
+        label: `companion_confirmation:${companion.email}`,
+        execute: () => this.notificationService.sendCompanionConfirmation(payload, companion),
+      })),
     ])
-
-    for (const result of results) {
-      if (result.status === 'rejected') {
-        console.warn('[rsvp_notification] dispatch failed', { reason: String(result.reason) })
-      }
-    }
   }
 
   private isUniqueViolation(error: unknown): boolean {

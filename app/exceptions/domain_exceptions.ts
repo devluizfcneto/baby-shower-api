@@ -43,3 +43,31 @@ export class RsvpPersistFailedException extends InternalServerException {
     this.name = 'RsvpPersistFailedException'
   }
 }
+
+export class GiftNotFoundException extends NotFoundException {
+  constructor(message = 'Presente nao encontrado.') {
+    super([{ code: ErrorCode.GIFT_NOT_FOUND, message }])
+    this.name = 'GiftNotFoundException'
+  }
+}
+
+export class GiftBlockedException extends ConflictException {
+  constructor(message = 'Este presente esta indisponivel no momento.') {
+    super([{ code: ErrorCode.GIFT_BLOCKED, message }])
+    this.name = 'GiftBlockedException'
+  }
+}
+
+export class GiftLimitExceededException extends ConflictException {
+  constructor(message = 'Este presente atingiu o limite de confirmacoes.') {
+    super([{ code: ErrorCode.GIFT_LIMIT_EXCEEDED, message, field: 'quantity' }])
+    this.name = 'GiftLimitExceededException'
+  }
+}
+
+export class PurchaseConfirmationPersistFailedException extends InternalServerException {
+  constructor(message = 'Nao foi possivel confirmar a compra agora.') {
+    super([{ code: ErrorCode.PURCHASE_CONFIRMATION_PERSIST_FAILED, message }])
+    this.name = 'PurchaseConfirmationPersistFailedException'
+  }
+}

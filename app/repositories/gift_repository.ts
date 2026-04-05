@@ -1,4 +1,4 @@
-import type { DataSource } from 'typeorm'
+import type { DataSource, EntityManager, Repository } from 'typeorm'
 
 import { Event } from '#entities/event'
 import { Gift } from '#entities/gift'
@@ -37,7 +37,11 @@ export type GiftListByEventResult = {
 }
 
 export class GiftRepository {
-  constructor(private readonly dataSource: DataSource = AppDataSource) {}
+  private readonly repository: Repository<Gift>
+
+  constructor(private readonly dataSource: DataSource = AppDataSource) {
+    this.repository = this.dataSource.getRepository(Gift)
+  }
 
   async findPublicByEventCode(eventCode: string): Promise<GiftListByEventResult> {
     const rows = await this.dataSource
@@ -82,5 +86,29 @@ export class GiftRepository {
       }))
 
     return { eventFound: true, gifts }
+  }
+
+  async findByIdForUpdate(giftId: number, manager: EntityManager): Promise<Gift | null> {
+    return manager
+      .getRepository(Gift)
+      .createQueryBuilder('gift')
+      .where('gift.id = :giftId', { giftId })
+      .setLock('pessimistic_write')
+      .getOne()
+  }
+
+  async updateConfirmedQuantity(
+    giftId: number,
+    confirmedQuantity: number,
+    manager?: EntityManager
+  ): Promise<void> {
+    const activeRepository = manager ? manager.getRepository(Gift) : this.repository
+
+    await activeRepository
+      .createQueryBuilder()
+      .update(Gift)
+      .set({ confirmedQuantity, updatedAt: new Date() })
+      .where('id = :giftId', { giftId })
+      .execute()
   }
 }
