@@ -4,7 +4,9 @@ import {
   RsvpAlreadyConfirmedException,
   RsvpEventUnavailableException,
 } from '#exceptions/domain_exceptions'
+import { BestEffortNotificationService } from '#services/best_effort_notification_service'
 import { AppDataSource } from '#services/database_service'
+import { InputSanitizerService } from '#services/input_sanitizer_service'
 import { RsvpService } from '#services/rsvp_service'
 
 test.group('RsvpService', () => {
@@ -43,7 +45,9 @@ test.group('RsvpService', () => {
         sendGuestConfirmation: async () => {},
         sendAdminNotification: async () => {},
         sendCompanionConfirmation: async () => {},
-      } as any
+      } as any,
+      new BestEffortNotificationService(),
+      new InputSanitizerService()
     )
 
     const originalTransaction = AppDataSource.transaction.bind(AppDataSource)
@@ -86,7 +90,9 @@ test.group('RsvpService', () => {
       { findEventIdByCode: async () => null } as any,
       { existsByEventAndEmail: async () => false } as any,
       {} as any,
-      {} as any
+      {} as any,
+      new BestEffortNotificationService(),
+      new InputSanitizerService()
     )
 
     try {
@@ -110,7 +116,9 @@ test.group('RsvpService', () => {
       { findEventIdByCode: async () => 10 } as any,
       { existsByEventAndEmail: async () => false } as any,
       {} as any,
-      {} as any
+      {} as any,
+      new BestEffortNotificationService(),
+      new InputSanitizerService()
     )
 
     const originalTransaction = AppDataSource.transaction.bind(AppDataSource)
@@ -161,7 +169,9 @@ test.group('RsvpService', () => {
         sendCompanionConfirmation: async () => {
           throw new Error('smtp failed')
         },
-      } as any
+      } as any,
+      new BestEffortNotificationService(),
+      new InputSanitizerService()
     )
 
     const originalTransaction = AppDataSource.transaction.bind(AppDataSource)
@@ -190,7 +200,9 @@ test.group('RsvpService', () => {
       { findEventIdByCode: async () => 10 } as any,
       { existsByEventAndEmail: async () => false } as any,
       { createManyByGuestId: async () => [] } as any,
-      {} as any
+      {} as any,
+      new BestEffortNotificationService(),
+      new InputSanitizerService()
     )
 
     try {
@@ -234,7 +246,9 @@ test.group('RsvpService', () => {
         sendCompanionConfirmation: async (_payload: unknown, companion: { email: string }) => {
           sentCompanions.push(companion.email)
         },
-      } as any
+      } as any,
+      new BestEffortNotificationService(),
+      new InputSanitizerService()
     )
 
     const originalTransaction = AppDataSource.transaction.bind(AppDataSource)

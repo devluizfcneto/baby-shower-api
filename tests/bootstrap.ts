@@ -5,6 +5,8 @@ import { apiClient } from '@japa/api-client'
 import { pluginAdonisJS } from '@japa/plugin-adonisjs'
 import testUtils from '@adonisjs/core/services/test_utils'
 
+import { AppDataSource } from '#services/database_service'
+
 /**
  * This file is imported by the "bin/test.ts" entrypoint file
  */
@@ -23,8 +25,22 @@ export const plugins: Config['plugins'] = [assert(), apiClient(), pluginAdonisJS
  * The teardown functions are executed after all the tests
  */
 export const runnerHooks: Required<Pick<Config, 'setup' | 'teardown'>> = {
-  setup: [],
-  teardown: [],
+  setup: [
+    async () => {
+      if (!AppDataSource.isInitialized) {
+        await AppDataSource.initialize()
+      }
+
+      await AppDataSource.runMigrations()
+    },
+  ],
+  teardown: [
+    async () => {
+      if (AppDataSource.isInitialized) {
+        await AppDataSource.destroy()
+      }
+    },
+  ],
 }
 
 /**

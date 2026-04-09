@@ -8,6 +8,7 @@ import {
 } from '#exceptions/domain_exceptions'
 import { BestEffortNotificationService } from '#services/best_effort_notification_service'
 import { AppDataSource } from '#services/database_service'
+import { InputSanitizerService } from '#services/input_sanitizer_service'
 import { PurchaseConfirmationService } from '#services/purchase_confirmation_service'
 
 test.group('PurchaseConfirmationService', () => {
@@ -42,7 +43,8 @@ test.group('PurchaseConfirmationService', () => {
       {
         sendAdminPurchaseNotification: async () => {},
       } as any,
-      new BestEffortNotificationService()
+      new BestEffortNotificationService(),
+      new InputSanitizerService()
     )
 
     const originalTransaction = AppDataSource.transaction.bind(AppDataSource)
@@ -92,7 +94,8 @@ test.group('PurchaseConfirmationService', () => {
       } as any,
       {} as any,
       {} as any,
-      new BestEffortNotificationService()
+      new BestEffortNotificationService(),
+      new InputSanitizerService()
     )
 
     const originalTransaction = AppDataSource.transaction.bind(AppDataSource)
@@ -127,7 +130,8 @@ test.group('PurchaseConfirmationService', () => {
       } as any,
       {} as any,
       {} as any,
-      new BestEffortNotificationService()
+      new BestEffortNotificationService(),
+      new InputSanitizerService()
     )
 
     const originalTransaction = AppDataSource.transaction.bind(AppDataSource)
@@ -162,7 +166,8 @@ test.group('PurchaseConfirmationService', () => {
       } as any,
       {} as any,
       {} as any,
-      new BestEffortNotificationService()
+      new BestEffortNotificationService(),
+      new InputSanitizerService()
     )
 
     const originalTransaction = AppDataSource.transaction.bind(AppDataSource)
@@ -214,7 +219,8 @@ test.group('PurchaseConfirmationService', () => {
           throw new Error('smtp failed')
         },
       } as any,
-      new BestEffortNotificationService()
+      new BestEffortNotificationService(),
+      new InputSanitizerService()
     )
 
     const originalTransaction = AppDataSource.transaction.bind(AppDataSource)
@@ -242,7 +248,8 @@ test.group('PurchaseConfirmationService', () => {
       {} as any,
       {} as any,
       {} as any,
-      new BestEffortNotificationService()
+      new BestEffortNotificationService(),
+      new InputSanitizerService()
     )
 
     const originalTransaction = AppDataSource.transaction.bind(AppDataSource)
