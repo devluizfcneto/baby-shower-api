@@ -3,9 +3,11 @@ import type { HttpContext } from '@adonisjs/core/http'
 import { RsvpService } from '#services/rsvp_service'
 import { eventCodeQueryValidator } from '#validators/event_code_query_validator'
 import { rsvpValidator } from '#validators/rsvp_validator'
+import { inject } from '@adonisjs/core'
 
+@inject()
 export default class RsvpController {
-  constructor(private readonly rsvpService: RsvpService = new RsvpService()) {}
+  constructor(private readonly rsvpService: RsvpService) {}
 
   async store({ request, response }: HttpContext) {
     const { eventCode } = await eventCodeQueryValidator.validate(request.params())

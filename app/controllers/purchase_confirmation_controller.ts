@@ -3,12 +3,11 @@ import type { HttpContext } from '@adonisjs/core/http'
 import { PurchaseConfirmationService } from '#services/purchase_confirmation_service'
 import { giftIdParamValidator } from '#validators/gift_id_param_validator'
 import { purchaseConfirmationValidator } from '#validators/purchase_confirmation_validator'
+import { inject } from '@adonisjs/core'
 
+@inject()
 export default class PurchaseConfirmationController {
-  constructor(
-    private readonly purchaseConfirmationService: PurchaseConfirmationService =
-      new PurchaseConfirmationService()
-  ) {}
+  constructor(private readonly purchaseConfirmationService: PurchaseConfirmationService) {}
 
   async store({ request, response }: HttpContext) {
     const { giftId } = await giftIdParamValidator.validate(request.params())

@@ -15,16 +15,18 @@ import { logoutSessionValidator, refreshSessionValidator } from '#validators/aut
 import { UserSessionService } from '#services/user_session_service'
 
 import { User } from '../entities/user.js'
+import { inject } from '@adonisjs/core'
 
 type AuthPayload = {
   userId: number
   email: string
 }
 
+@inject()
 export default class AuthController {
   constructor(
-    private readonly jwtTokenService: JwtTokenService = new JwtTokenService(),
-    private readonly userSessionService: UserSessionService = new UserSessionService()
+    private readonly jwtTokenService: JwtTokenService,
+    private readonly userSessionService: UserSessionService
   ) {}
 
   async register({ request, response }: HttpContext) {

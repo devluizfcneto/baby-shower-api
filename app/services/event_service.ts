@@ -1,5 +1,6 @@
 import { EventRepository, type EventPublicProjection } from '../repositories/event_repository.js'
 import { EventFetchFailedException, EventNotFoundException } from '#exceptions/domain_exceptions'
+import { inject } from '@adonisjs/core'
 
 type PublicEventResponse = {
   data: {
@@ -22,8 +23,9 @@ type PublicEventResponse = {
   }
 }
 
+@inject()
 export class EventService {
-  constructor(private readonly eventRepository: EventRepository = new EventRepository()) {}
+  constructor(private readonly eventRepository: EventRepository) {}
 
   async getPublicEvent(eventCode: string): Promise<PublicEventResponse> {
     let event: EventPublicProjection | null

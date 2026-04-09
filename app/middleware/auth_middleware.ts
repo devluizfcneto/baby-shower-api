@@ -1,5 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import type { NextFn } from '@adonisjs/core/types/http'
+import { inject } from '@adonisjs/core'
 
 import { ErrorCode } from '#constants/error_code'
 import { UnauthorizedException } from '#exceptions/http_exceptions'
@@ -10,8 +11,9 @@ interface AuthPayload {
   email: string
 }
 
+@inject()
 export default class AuthMiddleware {
-  constructor(private readonly jwtTokenService: JwtTokenService = new JwtTokenService()) {}
+  constructor(private readonly jwtTokenService: JwtTokenService) {}
 
   async handle(ctx: HttpContext, next: NextFn) {
     const authHeader = ctx.request.header('authorization')

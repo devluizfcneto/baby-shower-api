@@ -1,5 +1,6 @@
 import { EventNotFoundException, GiftListFetchFailedException } from '#exceptions/domain_exceptions'
 import { GiftRepository, type GiftPublicProjection } from '#repositories/gift_repository'
+import { inject } from '@adonisjs/core'
 
 type GiftPublicStatus = 'available' | 'limit_reached' | 'blocked'
 
@@ -25,8 +26,9 @@ type PublicGiftListResponse = {
   }
 }
 
+@inject()
 export class GiftService {
-  constructor(private readonly giftRepository: GiftRepository = new GiftRepository()) {}
+  constructor(private readonly giftRepository: GiftRepository) {}
 
   async listPublicGifts(eventCode: string): Promise<PublicGiftListResponse> {
     let result: Awaited<ReturnType<GiftRepository['findPublicByEventCode']>>
