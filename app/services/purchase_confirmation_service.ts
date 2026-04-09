@@ -1,4 +1,5 @@
 import { QueryFailedError } from 'typeorm'
+import { inject } from '@adonisjs/core'
 
 import {
   GiftBlockedException,
@@ -10,6 +11,7 @@ import { GiftRepository } from '#repositories/gift_repository'
 import { PurchaseConfirmationRepository } from '#repositories/purchase_confirmation_repository'
 import { BestEffortNotificationService } from '#services/best_effort_notification_service'
 import { AppDataSource } from '#services/database_service'
+import { InputSanitizerService } from '#services/input_sanitizer_service'
 import { PurchaseNotificationService } from '#services/purchase_notification_service'
 
 type ConfirmPurchaseInput = {
@@ -50,12 +52,14 @@ type ConfirmPurchaseResponse = {
   }
 }
 
+@inject()
 export class PurchaseConfirmationService {
   constructor(
-    private readonly giftRepository: GiftRepository = new GiftRepository(),
-    private readonly purchaseConfirmationRepository: PurchaseConfirmationRepository = new PurchaseConfirmationRepository(),
-    private readonly notificationService: PurchaseNotificationService = new PurchaseNotificationService(),
-    private readonly bestEffortNotificationService: BestEffortNotificationService = new BestEffortNotificationService()
+    private readonly giftRepository: GiftRepository,
+    private readonly purchaseConfirmationRepository: PurchaseConfirmationRepository,
+    private readonly notificationService: PurchaseNotificationService,
+    private readonly bestEffortNotificationService: BestEffortNotificationService,
+    private readonly inputSanitizerService: InputSanitizerService
   ) {}
 
   async confirmPurchase(
@@ -199,11 +203,11 @@ export class PurchaseConfirmationService {
 
   private normalizeInput(input: ConfirmPurchaseInput): ConfirmPurchaseNormalizedInput {
     return {
-      guestName: input.guestName.trim(),
-      guestEmail: input.guestEmail.trim().toLowerCase(),
+      guestName: this.inputSanitizerService.normalizeRequiredText(input.guestName),
+      guestEmail: this.inputSanitizerService.normalizeEmail(input.guestEmail),
       quantity: input.quantity ?? 1,
-      orderNumber: input.orderNumber?.trim() || null,
-      notes: input.notes?.trim() || null,
+      orderNumber: this.inputSanitizerService.normalizeOptionalText(input.orderNumber),
+      notes: this.inputSanitizerService.normalizeOptionalText(input.notes),
     }
   }
 

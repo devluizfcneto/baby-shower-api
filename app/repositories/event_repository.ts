@@ -54,4 +54,15 @@ export class EventRepository {
 
     return result?.id ?? null
   }
+
+  async findLatestEventId(): Promise<number | null> {
+    const result = await this.repository
+      .createQueryBuilder('event')
+      .select('event.id', 'id')
+      .orderBy('event.id', 'DESC')
+      .limit(1)
+      .getRawOne<{ id: number }>()
+
+    return result?.id ?? null
+  }
 }
