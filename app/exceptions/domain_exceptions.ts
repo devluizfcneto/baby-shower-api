@@ -71,3 +71,17 @@ export class PurchaseConfirmationPersistFailedException extends InternalServerEx
     this.name = 'PurchaseConfirmationPersistFailedException'
   }
 }
+
+export class DonationEventUnavailableException extends NotFoundException {
+  constructor(message = 'Evento indisponivel para registro de doacao no momento.') {
+    super([{ code: ErrorCode.DONATION_EVENT_UNAVAILABLE, message }])
+    this.name = 'DonationEventUnavailableException'
+  }
+}
+
+export class DonationPersistFailedException extends InternalServerException {
+  constructor(message = 'Nao foi possivel registrar a doacao neste momento.') {
+    super([{ code: ErrorCode.DONATION_PERSIST_FAILED, message }])
+    this.name = 'DonationPersistFailedException'
+  }
+}

@@ -1,4 +1,5 @@
 import { QueryFailedError } from 'typeorm'
+import { inject } from '@adonisjs/core'
 
 import { ErrorCode } from '#constants/error_code'
 import {
@@ -12,6 +13,7 @@ import { GuestRepository } from '#repositories/guest_repository'
 import { BestEffortNotificationService } from '#services/best_effort_notification_service'
 import { CompanionRepository, type CompanionCreateInput } from '#repositories/companion_repository'
 import { AppDataSource } from '#services/database_service'
+import { InputSanitizerService } from '#services/input_sanitizer_service'
 import { RsvpNotificationService } from '#services/rsvp_notification_service'
 
 type ConfirmPresenceInput = {
@@ -36,16 +38,17 @@ type ConfirmPresenceResponse = {
   }
 }
 
+@inject()
 export class RsvpService {
   private static readonly MAX_COMPANIONS_PER_GUEST = 2
 
   constructor(
-    private readonly eventRepository: EventRepository = new EventRepository(),
-    private readonly guestRepository: GuestRepository = new GuestRepository(),
-    private readonly companionRepository: CompanionRepository = new CompanionRepository(),
-    private readonly notificationService: RsvpNotificationService = new RsvpNotificationService(),
-    private readonly bestEffortNotificationService: BestEffortNotificationService =
-      new BestEffortNotificationService()
+    private readonly eventRepository: EventRepository,
+    private readonly guestRepository: GuestRepository,
+    private readonly companionRepository: CompanionRepository,
+    private readonly notificationService: RsvpNotificationService,
+    private readonly bestEffortNotificationService: BestEffortNotificationService,
+    private readonly inputSanitizerService: InputSanitizerService
   ) {}
 
   async confirmPresence(
@@ -173,13 +176,13 @@ export class RsvpService {
 
   private normalizeInput(input: ConfirmPresenceInput): ConfirmPresenceInput {
     const companions: CompanionCreateInput[] = input.companions.map((companion) => ({
-      fullName: companion.fullName.trim(),
-      email: companion.email.trim().toLowerCase(),
+      fullName: this.inputSanitizerService.normalizeRequiredText(companion.fullName),
+      email: this.inputSanitizerService.normalizeEmail(companion.email),
     }))
 
     return {
-      fullName: input.fullName.trim(),
-      email: input.email.trim().toLowerCase(),
+      fullName: this.inputSanitizerService.normalizeRequiredText(input.fullName),
+      email: this.inputSanitizerService.normalizeEmail(input.email),
       companions,
     }
   }
