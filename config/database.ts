@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import env from '#start/env'
 
 import { Companion } from '../app/entities/companion.js'
+import { Donation } from '../app/entities/donation.js'
 import { Event } from '../app/entities/event.js'
 import { Gift } from '../app/entities/gift.js'
 import { Guest } from '../app/entities/guest.js'
@@ -20,7 +21,7 @@ const databaseConfig: DataSourceOptions = {
   database: env.get('DB_NAME'),
   synchronize: false,
   logging: env.get('DB_LOGGING'),
-  entities: [User, Event, UserSession, Guest, Companion, Gift, PurchaseConfirmation],
+  entities: [User, Event, UserSession, Guest, Companion, Gift, PurchaseConfirmation, Donation],
   migrations: [
     join(process.cwd(), 'database/migrations/*.{ts,js}'),
     join(process.cwd(), 'build/database/migrations/*.js'),
