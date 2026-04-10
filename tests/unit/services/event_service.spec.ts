@@ -1,26 +1,30 @@
 import { test } from '@japa/runner'
 
 import { EventFetchFailedException, EventNotFoundException } from '#exceptions/domain_exceptions'
+import { EventPayloadMapperService } from '#services/event_payload_mapper_service'
 import { EventService } from '#services/event_service'
 
 test.group('EventService', () => {
   test('maps entity to stable public DTO', async ({ assert }) => {
-    const service = new EventService({
-      findPublicEventByCode: async () => ({
-        id: 1,
-        code: 'babyshower2026event1',
-        name: 'Cha da Helena',
-        date: new Date('2026-06-18T15:00:00.000Z'),
-        venueAddress: 'Rua Exemplo, 123 - Sao Paulo/SP',
-        deliveryAddress: 'Rua Entrega, 456 - Sao Paulo/SP',
-        mapsLink: 'https://maps.google.com/test',
-        coverImageUrl: 'https://cdn.example.com/capa.jpg',
-        pixKeyDad: 'dad@example.com',
-        pixKeyMom: 'mom@example.com',
-        pixQrcodeDad: null,
-        pixQrcodeMom: null,
-      }),
-    } as any)
+    const service = new EventService(
+      {
+        findPublicEventByCode: async () => ({
+          id: 1,
+          code: 'babyshower2026event1',
+          name: 'Cha da Helena',
+          date: new Date('2026-06-18T15:00:00.000Z'),
+          venueAddress: 'Rua Exemplo, 123 - Sao Paulo/SP',
+          deliveryAddress: 'Rua Entrega, 456 - Sao Paulo/SP',
+          mapsLink: 'https://maps.google.com/test',
+          coverImageUrl: 'https://cdn.example.com/capa.jpg',
+          pixKeyDad: 'dad@example.com',
+          pixKeyMom: 'mom@example.com',
+          pixQrcodeDad: null,
+          pixQrcodeMom: null,
+        }),
+      } as any,
+      new EventPayloadMapperService()
+    )
 
     const response = await service.getPublicEvent('babyshower2026event1')
 
@@ -49,7 +53,10 @@ test.group('EventService', () => {
   })
 
   test('throws EVENT_NOT_FOUND when no event exists', async ({ assert }) => {
-    const service = new EventService({ findPublicEventByCode: async () => null } as any)
+    const service = new EventService(
+      { findPublicEventByCode: async () => null } as any,
+      new EventPayloadMapperService()
+    )
 
     try {
       await service.getPublicEvent('missingcode')
@@ -61,11 +68,14 @@ test.group('EventService', () => {
   })
 
   test('throws EVENT_FETCH_FAILED when repository fails', async ({ assert }) => {
-    const service = new EventService({
-      findPublicEventByCode: async () => {
-        throw new Error('db down')
-      },
-    } as any)
+    const service = new EventService(
+      {
+        findPublicEventByCode: async () => {
+          throw new Error('db down')
+        },
+      } as any,
+      new EventPayloadMapperService()
+    )
 
     try {
       await service.getPublicEvent('babyshower2026event1')
