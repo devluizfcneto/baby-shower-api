@@ -1,5 +1,6 @@
 import { EventNotFoundException, GiftListFetchFailedException } from '#exceptions/domain_exceptions'
-import { GiftRepository, type GiftPublicProjection } from '#repositories/gift_repository'
+import { GiftRepository } from '#repositories/gift_repository'
+import { GiftPayloadMapperService } from '#services/gift_payload_mapper_service'
 import { inject } from '@adonisjs/core'
 
 type GiftPublicStatus = 'available' | 'limit_reached' | 'blocked'
@@ -28,7 +29,10 @@ type PublicGiftListResponse = {
 
 @inject()
 export class GiftService {
-  constructor(private readonly giftRepository: GiftRepository) {}
+  constructor(
+    private readonly giftRepository: GiftRepository,
+    private readonly giftPayloadMapperService: GiftPayloadMapperService
+  ) {}
 
   async listPublicGifts(eventCode: string): Promise<PublicGiftListResponse> {
     let result: Awaited<ReturnType<GiftRepository['findPublicByEventCode']>>
@@ -43,7 +47,7 @@ export class GiftService {
       throw new EventNotFoundException()
     }
 
-    const data = result.gifts.map((gift) => this.mapGift(gift))
+    const data = result.gifts.map((gift) => this.giftPayloadMapperService.toPublicGiftData(gift))
 
     return {
       data,
@@ -53,36 +57,5 @@ export class GiftService {
         source: 'database',
       },
     }
-  }
-
-  private mapGift(gift: GiftPublicProjection) {
-    const remainingQuantity = Math.max(gift.maxQuantity - gift.confirmedQuantity, 0)
-
-    return {
-      id: gift.id,
-      name: gift.name,
-      description: gift.description,
-      imageUrl: gift.imageUrl,
-      marketplace: gift.marketplace,
-      marketplaceUrl: gift.marketplaceUrl,
-      maxQuantity: gift.maxQuantity,
-      confirmedQuantity: gift.confirmedQuantity,
-      remainingQuantity,
-      status: this.resolveGiftStatus(gift),
-      isBlocked: gift.isBlocked,
-      sortOrder: gift.sortOrder,
-    }
-  }
-
-  private resolveGiftStatus(gift: GiftPublicProjection): GiftPublicStatus {
-    if (gift.isBlocked) {
-      return 'blocked'
-    }
-
-    if (gift.confirmedQuantity >= gift.maxQuantity) {
-      return 'limit_reached'
-    }
-
-    return 'available'
   }
 }
