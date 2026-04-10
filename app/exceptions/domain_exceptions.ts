@@ -44,6 +44,13 @@ export class AdminGiftListFetchFailedException extends InternalServerException {
   }
 }
 
+export class AdminGuestListFetchFailedException extends InternalServerException {
+  constructor(message = 'Nao foi possivel carregar a lista de confirmacoes agora.') {
+    super([{ code: ErrorCode.ADMIN_GUEST_LIST_FETCH_FAILED, message }])
+    this.name = 'AdminGuestListFetchFailedException'
+  }
+}
+
 export class RsvpEventUnavailableException extends NotFoundException {
   constructor(message = 'Evento indisponivel para confirmacao no momento.') {
     super([{ code: ErrorCode.RSVP_EVENT_UNAVAILABLE, message }])
