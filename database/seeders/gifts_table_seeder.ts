@@ -22,22 +22,14 @@ export default class GiftsTableSeeder implements Seeder {
       return
     }
 
-    const existingGift = await giftRepository.findOne({
-      where: { eventId: latestEvent.id, name: 'Kit Mamadeiras Anticolica' },
-    })
-
-    if (existingGift) {
-      return
-    }
-
-    await giftRepository.insert([
+    const giftsToSeed = [
       {
         eventId: latestEvent.id,
         name: 'Kit Mamadeiras Anticolica',
         description: 'Kit com 3 mamadeiras para recem-nascido.',
         imageUrl: null,
         marketplaceUrl: 'https://www.amazon.com.br/dp/B000TESTE01',
-        marketplace: 'amazon',
+        marketplace: 'amazon' as const,
         asin: 'B000TESTE01',
         affiliateLinkAmazon: null,
         affiliateLinkMl: null,
@@ -53,7 +45,7 @@ export default class GiftsTableSeeder implements Seeder {
         description: 'Toalha com capuz em algodao.',
         imageUrl: null,
         marketplaceUrl: 'https://www.mercadolivre.com.br/p/MLBTESTE01',
-        marketplace: 'mercadolivre',
+        marketplace: 'mercadolivre' as const,
         asin: null,
         affiliateLinkAmazon: null,
         affiliateLinkMl: null,
@@ -63,6 +55,35 @@ export default class GiftsTableSeeder implements Seeder {
         isBlocked: false,
         sortOrder: 2,
       },
-    ])
+      {
+        eventId: latestEvent.id,
+        name: 'Canguru Ergonomico',
+        description: 'Canguru com suporte para recem-nascido.',
+        imageUrl: null,
+        marketplaceUrl: 'https://shopee.com.br/product/TESTE-ERGONOMICO',
+        marketplace: 'shopee' as const,
+        asin: null,
+        affiliateLinkAmazon: null,
+        affiliateLinkMl: null,
+        affiliateLinkShopee: null,
+        maxQuantity: 1,
+        confirmedQuantity: 0,
+        isBlocked: true,
+        sortOrder: 3,
+      },
+    ]
+
+    const existing = await giftRepository
+      .createQueryBuilder('gift')
+      .select(['gift.name'])
+      .where('gift.event_id = :eventId', { eventId: latestEvent.id })
+      .getMany()
+
+    const existingNames = new Set(existing.map((gift) => gift.name))
+    const missing = giftsToSeed.filter((gift) => !existingNames.has(gift.name))
+
+    if (missing.length > 0) {
+      await giftRepository.insert(missing)
+    }
   }
 }
