@@ -16,6 +16,20 @@ export class EventFetchFailedException extends InternalServerException {
   }
 }
 
+export class EventConfigNotFoundException extends NotFoundException {
+  constructor(message = 'Configuracao do evento nao encontrada.') {
+    super([{ code: ErrorCode.EVENT_CONFIG_NOT_FOUND, message }])
+    this.name = 'EventConfigNotFoundException'
+  }
+}
+
+export class EventConfigUpdateFailedException extends InternalServerException {
+  constructor(message = 'Nao foi possivel atualizar as configuracoes do evento agora.') {
+    super([{ code: ErrorCode.EVENT_CONFIG_UPDATE_FAILED, message }])
+    this.name = 'EventConfigUpdateFailedException'
+  }
+}
+
 export class GiftListFetchFailedException extends InternalServerException {
   constructor(message = 'Nao foi possivel carregar a lista de presentes agora.') {
     super([{ code: ErrorCode.GIFT_LIST_FETCH_FAILED, message }])

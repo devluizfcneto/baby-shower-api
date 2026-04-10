@@ -12,6 +12,7 @@ import { middleware } from '#start/kernel'
 
 const AuthController = () => import('#controllers/auth_controller')
 const DonationController = () => import('#controllers/donation_controller')
+const EventAdminController = () => import('#controllers/event_admin_controller')
 const EventController = () => import('#controllers/event_controller')
 const GiftController = () => import('#controllers/gift_controller')
 const PurchaseConfirmationController = () => import('#controllers/purchase_confirmation_controller')
@@ -43,6 +44,14 @@ router
     router.post('/login', [AuthController, 'login']).as('adminAuth.login')
     router.post('/refresh', [AuthController, 'refresh']).as('adminAuth.refresh')
     router.get('/me', [AuthController, 'show']).use(middleware.auth()).as('adminAuth.me')
+    router
+      .get('/event', [EventAdminController, 'show'])
+      .use(middleware.auth())
+      .as('adminEvent.show')
+    router
+      .put('/event', [EventAdminController, 'update'])
+      .use(middleware.auth())
+      .as('adminEvent.update')
     router.post('/logout', [AuthController, 'logout']).use(middleware.auth()).as('adminAuth.logout')
     router
       .post('/logout-all', [AuthController, 'logoutAll'])
