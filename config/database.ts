@@ -22,10 +22,7 @@ const databaseConfig: DataSourceOptions = {
   synchronize: false,
   logging: env.get('DB_LOGGING'),
   entities: [User, Event, UserSession, Guest, Companion, Gift, PurchaseConfirmation, Donation],
-  migrations: [
-    join(process.cwd(), 'database/migrations/*.{ts,js}'),
-    join(process.cwd(), 'build/database/migrations/*.js'),
-  ],
+  migrations: [join(process.cwd(), 'database/migrations/*.{ts,js}')],
   migrationsTableName: 'typeorm_migrations',
 }
 
