@@ -1,53 +1,57 @@
 import { test } from '@japa/runner'
 
 import { EventNotFoundException, GiftListFetchFailedException } from '#exceptions/domain_exceptions'
+import { GiftPayloadMapperService } from '#services/gift_payload_mapper_service'
 import { GiftService } from '#services/gift_service'
 
 test.group('GiftService', () => {
   test('maps gifts to stable public DTO with status and remaining quantity', async ({ assert }) => {
-    const service = new GiftService({
-      findPublicByEventCode: async () => ({
-        eventFound: true,
-        gifts: [
-          {
-            id: 1,
-            name: 'Disponivel',
-            description: null,
-            imageUrl: null,
-            marketplace: 'amazon',
-            marketplaceUrl: 'https://example.com/a',
-            maxQuantity: 3,
-            confirmedQuantity: 1,
-            isBlocked: false,
-            sortOrder: 1,
-          },
-          {
-            id: 2,
-            name: 'Limite',
-            description: null,
-            imageUrl: null,
-            marketplace: 'mercadolivre',
-            marketplaceUrl: 'https://example.com/b',
-            maxQuantity: 2,
-            confirmedQuantity: 2,
-            isBlocked: false,
-            sortOrder: 2,
-          },
-          {
-            id: 3,
-            name: 'Bloqueado',
-            description: null,
-            imageUrl: null,
-            marketplace: 'shopee',
-            marketplaceUrl: 'https://example.com/c',
-            maxQuantity: 2,
-            confirmedQuantity: 0,
-            isBlocked: true,
-            sortOrder: 3,
-          },
-        ],
-      }),
-    } as any)
+    const service = new GiftService(
+      {
+        findPublicByEventCode: async () => ({
+          eventFound: true,
+          gifts: [
+            {
+              id: 1,
+              name: 'Disponivel',
+              description: null,
+              imageUrl: null,
+              marketplace: 'amazon',
+              marketplaceUrl: 'https://example.com/a',
+              maxQuantity: 3,
+              confirmedQuantity: 1,
+              isBlocked: false,
+              sortOrder: 1,
+            },
+            {
+              id: 2,
+              name: 'Limite',
+              description: null,
+              imageUrl: null,
+              marketplace: 'mercadolivre',
+              marketplaceUrl: 'https://example.com/b',
+              maxQuantity: 2,
+              confirmedQuantity: 2,
+              isBlocked: false,
+              sortOrder: 2,
+            },
+            {
+              id: 3,
+              name: 'Bloqueado',
+              description: null,
+              imageUrl: null,
+              marketplace: 'shopee',
+              marketplaceUrl: 'https://example.com/c',
+              maxQuantity: 2,
+              confirmedQuantity: 0,
+              isBlocked: true,
+              sortOrder: 3,
+            },
+          ],
+        }),
+      } as any,
+      new GiftPayloadMapperService()
+    )
 
     const response = await service.listPublicGifts('babyshower2026event1')
 
@@ -62,12 +66,15 @@ test.group('GiftService', () => {
   })
 
   test('returns empty list when event exists without gifts', async ({ assert }) => {
-    const service = new GiftService({
-      findPublicByEventCode: async () => ({
-        eventFound: true,
-        gifts: [],
-      }),
-    } as any)
+    const service = new GiftService(
+      {
+        findPublicByEventCode: async () => ({
+          eventFound: true,
+          gifts: [],
+        }),
+      } as any,
+      new GiftPayloadMapperService()
+    )
 
     const response = await service.listPublicGifts('babyshower2026event1')
 
@@ -76,12 +83,15 @@ test.group('GiftService', () => {
   })
 
   test('throws EVENT_NOT_FOUND when event does not exist', async ({ assert }) => {
-    const service = new GiftService({
-      findPublicByEventCode: async () => ({
-        eventFound: false,
-        gifts: [],
-      }),
-    } as any)
+    const service = new GiftService(
+      {
+        findPublicByEventCode: async () => ({
+          eventFound: false,
+          gifts: [],
+        }),
+      } as any,
+      new GiftPayloadMapperService()
+    )
 
     try {
       await service.listPublicGifts('missingeventcode')
@@ -93,11 +103,14 @@ test.group('GiftService', () => {
   })
 
   test('throws GIFT_LIST_FETCH_FAILED when repository fails', async ({ assert }) => {
-    const service = new GiftService({
-      findPublicByEventCode: async () => {
-        throw new Error('db down')
-      },
-    } as any)
+    const service = new GiftService(
+      {
+        findPublicByEventCode: async () => {
+          throw new Error('db down')
+        },
+      } as any,
+      new GiftPayloadMapperService()
+    )
 
     try {
       await service.listPublicGifts('babyshower2026event1')
