@@ -4,6 +4,7 @@
  */
 
 export const controllers = {
+  AdminGift: () => import('#controllers/admin_gift_controller'),
   Auth: () => import('#controllers/auth_controller'),
   Donation: () => import('#controllers/donation_controller'),
   EventAdmin: () => import('#controllers/event_admin_controller'),

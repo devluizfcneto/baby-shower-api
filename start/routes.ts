@@ -11,6 +11,7 @@ import router from '@adonisjs/core/services/router'
 import { middleware } from '#start/kernel'
 
 const AuthController = () => import('#controllers/auth_controller')
+const AdminGiftController = () => import('#controllers/admin_gift_controller')
 const DonationController = () => import('#controllers/donation_controller')
 const EventAdminController = () => import('#controllers/event_admin_controller')
 const EventController = () => import('#controllers/event_controller')
@@ -52,6 +53,26 @@ router
       .put('/event', [EventAdminController, 'update'])
       .use(middleware.auth())
       .as('adminEvent.update')
+    router
+      .get('/gifts', [AdminGiftController, 'index'])
+      .use(middleware.auth())
+      .as('adminGift.index')
+    router
+      .post('/gifts', [AdminGiftController, 'store'])
+      .use(middleware.auth())
+      .as('adminGift.store')
+    router
+      .put('/gifts/:id', [AdminGiftController, 'update'])
+      .use(middleware.auth())
+      .as('adminGift.update')
+    router
+      .put('/gifts/:id/block', [AdminGiftController, 'toggleBlock'])
+      .use(middleware.auth())
+      .as('adminGift.toggleBlock')
+    router
+      .delete('/gifts/:id', [AdminGiftController, 'destroy'])
+      .use(middleware.auth())
+      .as('adminGift.destroy')
     router.post('/logout', [AuthController, 'logout']).use(middleware.auth()).as('adminAuth.logout')
     router
       .post('/logout-all', [AuthController, 'logoutAll'])
