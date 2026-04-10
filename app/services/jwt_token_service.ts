@@ -1,5 +1,6 @@
 import jwt, { type JwtPayload } from 'jsonwebtoken'
 import type { Secret, SignOptions } from 'jsonwebtoken'
+import { randomUUID } from 'node:crypto'
 
 import env from '#start/env'
 
@@ -55,6 +56,7 @@ export class JwtTokenService {
       {
         subject: String(input.sub),
         expiresIn: this.getRefreshExpiresIn(),
+        jwtid: randomUUID(),
       }
     )
   }

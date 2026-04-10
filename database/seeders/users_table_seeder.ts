@@ -11,7 +11,7 @@ export default class UsersTableSeeder implements Seeder {
   async run() {
     const userRepository = AppDataSource.getRepository(User)
 
-    const email = process.env.SEED_ADMIN_EMAIL ?? 'admin@baby-shower.local'
+    const email = (process.env.SEED_ADMIN_EMAIL ?? 'admin@baby-shower.local').trim().toLowerCase()
     const name = process.env.SEED_ADMIN_NAME ?? 'Admin'
     const password = process.env.SEED_ADMIN_PASSWORD ?? '12345678'
 

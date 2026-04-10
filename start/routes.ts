@@ -25,13 +25,30 @@ router.post('/api/donations', [DonationController, 'store'])
 
 router
   .group(() => {
-    router.post('/register', [AuthController, 'register'])
-    router.post('/login', [AuthController, 'login'])
-    router.post('/refresh', [AuthController, 'refresh'])
-    router.get('/user', [AuthController, 'show']).use(middleware.auth())
-    router.post('/logout', [AuthController, 'logout']).use(middleware.auth())
-    router.post('/logout-all', [AuthController, 'logoutAll']).use(middleware.auth())
+    router.post('/register', [AuthController, 'register']).as('auth.register')
+    router.post('/login', [AuthController, 'login']).as('auth.login')
+    router.post('/refresh', [AuthController, 'refresh']).as('auth.refresh')
+    router.get('/user', [AuthController, 'show']).use(middleware.auth()).as('auth.user')
+    router.get('/me', [AuthController, 'show']).use(middleware.auth()).as('auth.me')
+    router.post('/logout', [AuthController, 'logout']).use(middleware.auth()).as('auth.logout')
+    router
+      .post('/logout-all', [AuthController, 'logoutAll'])
+      .use(middleware.auth())
+      .as('auth.logoutAll')
   })
   .prefix('/api/auth')
+
+router
+  .group(() => {
+    router.post('/login', [AuthController, 'login']).as('adminAuth.login')
+    router.post('/refresh', [AuthController, 'refresh']).as('adminAuth.refresh')
+    router.get('/me', [AuthController, 'show']).use(middleware.auth()).as('adminAuth.me')
+    router.post('/logout', [AuthController, 'logout']).use(middleware.auth()).as('adminAuth.logout')
+    router
+      .post('/logout-all', [AuthController, 'logoutAll'])
+      .use(middleware.auth())
+      .as('adminAuth.logoutAll')
+  })
+  .prefix('/api/admin')
 
 router.post('/api/rsvp/:eventCode', [RsvpController, 'store'])
