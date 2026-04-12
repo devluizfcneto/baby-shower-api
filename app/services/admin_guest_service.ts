@@ -1,8 +1,6 @@
 import { inject } from '@adonisjs/core'
 
-import { ErrorCode } from '#constants/error_code'
 import { AdminGuestListFetchFailedException } from '#exceptions/domain_exceptions'
-import { validationError } from '#exceptions/error_factory'
 import {
   GuestRepository,
   type AdminCompanionProjection,
@@ -10,6 +8,7 @@ import {
   type AdminGuestSortBy,
   type AdminGuestSortDir,
 } from '#repositories/guest_repository'
+import { AdminQueryNormalizerService } from '#services/admin_query_normalizer_service'
 import { EventRepository } from '#repositories/event_repository'
 import { InputSanitizerService } from '#services/input_sanitizer_service'
 
@@ -82,6 +81,7 @@ export class AdminGuestService {
   constructor(
     private readonly eventRepository: EventRepository,
     private readonly guestRepository: GuestRepository,
+    private readonly adminQueryNormalizerService: AdminQueryNormalizerService,
     private readonly inputSanitizerService: InputSanitizerService
   ) {}
 
@@ -128,7 +128,10 @@ export class AdminGuestService {
           page: normalizedInput.page,
           perPage: normalizedInput.perPage,
           total,
-          totalPages: this.calculateTotalPages(total, normalizedInput.perPage),
+          totalPages: this.adminQueryNormalizerService.calculateTotalPages(
+            total,
+            normalizedInput.perPage
+          ),
           sortBy: normalizedInput.sortBy,
           sortDir: normalizedInput.sortDir,
           filters: {
@@ -150,13 +153,13 @@ export class AdminGuestService {
   }
 
   private normalizeInput(input: ListAdminGuestsInput): NormalizedInput {
-    const page = this.normalizePositiveInt(
+    const page = this.adminQueryNormalizerService.normalizePositiveInt(
       input.page ?? AdminGuestService.DEFAULT_PAGE,
       'page',
       1,
       Number.MAX_SAFE_INTEGER
     )
-    const perPage = this.normalizePositiveInt(
+    const perPage = this.adminQueryNormalizerService.normalizePositiveInt(
       input.perPage ?? AdminGuestService.DEFAULT_PER_PAGE,
       'perPage',
       1,
@@ -164,18 +167,21 @@ export class AdminGuestService {
     )
 
     const search = this.inputSanitizerService.normalizeOptionalText(input.search) ?? undefined
-    const confirmedFrom = this.parseOptionalDate(input.confirmedFrom, 'confirmedFrom')
-    const confirmedTo = this.parseOptionalDate(input.confirmedTo, 'confirmedTo')
+    const confirmedFrom = this.adminQueryNormalizerService.parseOptionalIsoDate(
+      input.confirmedFrom,
+      'confirmedFrom'
+    )
+    const confirmedTo = this.adminQueryNormalizerService.parseOptionalIsoDate(
+      input.confirmedTo,
+      'confirmedTo'
+    )
 
-    if (confirmedFrom && confirmedTo && confirmedFrom > confirmedTo) {
-      throw validationError([
-        {
-          code: ErrorCode.INVALID_QUERY_FILTER_RANGE,
-          field: 'confirmedFrom|confirmedTo',
-          message: 'confirmedFrom must be less than or equal to confirmedTo',
-        },
-      ])
-    }
+    this.adminQueryNormalizerService.assertDateRange(
+      confirmedFrom,
+      confirmedTo,
+      'confirmedFrom',
+      'confirmedTo'
+    )
 
     return {
       page,
@@ -187,37 +193,6 @@ export class AdminGuestService {
       sortDir: input.sortDir ?? AdminGuestService.DEFAULT_SORT_DIR,
       includeCompanions: input.expand === 'companions',
     }
-  }
-
-  private normalizePositiveInt(value: number, field: string, min: number, max: number): number {
-    if (!Number.isInteger(value) || value < min || value > max) {
-      throw validationError([
-        {
-          field,
-          message: `${field} must be an integer between ${min} and ${max}`,
-        },
-      ])
-    }
-
-    return value
-  }
-
-  private parseOptionalDate(value: string | undefined, field: string): Date | undefined {
-    if (!value) {
-      return undefined
-    }
-
-    const parsed = new Date(value)
-    if (Number.isNaN(parsed.getTime())) {
-      throw validationError([
-        {
-          field,
-          message: `${field} must be a valid ISO datetime`,
-        },
-      ])
-    }
-
-    return parsed
   }
 
   private async resolveCompanionsMap(
@@ -284,13 +259,5 @@ export class AdminGuestService {
         source: 'database',
       },
     }
-  }
-
-  private calculateTotalPages(total: number, perPage: number): number {
-    if (total === 0) {
-      return 0
-    }
-
-    return Math.ceil(total / perPage)
   }
 }
