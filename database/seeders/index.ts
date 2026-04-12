@@ -1,4 +1,5 @@
 import AdminGuestConfirmationsTableSeeder from './admin_guest_confirmations_table_seeder.js'
+import AdminPurchaseConfirmationsTableSeeder from './admin_purchase_confirmations_table_seeder.js'
 import CompanionsTableSeeder from './companions_table_seeder.js'
 import DonationsTableSeeder from './donations_table_seeder.js'
 import EventsTableSeeder from './events_table_seeder.js'
@@ -17,5 +18,6 @@ export const seeders: SeederConstructor[] = [
   GuestsTableSeeder,
   CompanionsTableSeeder,
   AdminGuestConfirmationsTableSeeder,
+  AdminPurchaseConfirmationsTableSeeder,
   DonationsTableSeeder,
 ]
