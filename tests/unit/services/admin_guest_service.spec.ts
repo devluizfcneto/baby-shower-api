@@ -1,6 +1,7 @@
 import { test } from '@japa/runner'
 
 import { AdminGuestListFetchFailedException } from '#exceptions/domain_exceptions'
+import { AdminQueryNormalizerService } from '#services/admin_query_normalizer_service'
 import { AdminGuestService } from '#services/admin_guest_service'
 import { InputSanitizerService } from '#services/input_sanitizer_service'
 
@@ -30,6 +31,7 @@ test.group('AdminGuestService', () => {
         countAdminGuestConfirmations: async () => 2,
         findCompanionsByGuestIds: async () => [],
       } as any,
+      new AdminQueryNormalizerService(),
       new InputSanitizerService()
     )
 
@@ -72,6 +74,7 @@ test.group('AdminGuestService', () => {
           ]
         },
       } as any,
+      new AdminQueryNormalizerService(),
       new InputSanitizerService()
     )
 
@@ -91,6 +94,7 @@ test.group('AdminGuestService', () => {
         findLatestEventId: async () => null,
       } as any,
       {} as any,
+      new AdminQueryNormalizerService(),
       new InputSanitizerService()
     )
 
@@ -107,6 +111,7 @@ test.group('AdminGuestService', () => {
         findLatestEventId: async () => 10,
       } as any,
       {} as any,
+      new AdminQueryNormalizerService(),
       new InputSanitizerService()
     )
 
@@ -132,6 +137,7 @@ test.group('AdminGuestService', () => {
         },
         countAdminGuestConfirmations: async () => 0,
       } as any,
+      new AdminQueryNormalizerService(),
       new InputSanitizerService()
     )
 
