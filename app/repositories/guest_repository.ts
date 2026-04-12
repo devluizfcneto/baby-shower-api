@@ -44,6 +44,24 @@ export type AdminCompanionProjection = {
   fullName: string
 }
 
+export type AdminGuestExportFilters = {
+  eventId: number
+  search?: string
+  confirmedFrom?: Date
+  confirmedTo?: Date
+  limit: number
+}
+
+export type AdminGuestExportProjection = {
+  guestId: number
+  fullName: string
+  email: string
+  companionsCount: number
+  totalPeople: number
+  companionsNames: string
+  confirmedAt: Date
+}
+
 export class GuestRepository {
   constructor(
     private readonly repository: Repository<Guest> = AppDataSource.getRepository(Guest)
@@ -186,6 +204,57 @@ export class GuestRepository {
       guestId: Number(row.guest_id),
       fullName: row.full_name,
     }))
+  }
+
+  async findAdminGuestsForExport(
+    filters: AdminGuestExportFilters
+  ): Promise<AdminGuestExportProjection[]> {
+    const query = this.repository
+      .createQueryBuilder('guest')
+      .leftJoin('companions', 'companion', 'companion.guest_id = guest.id')
+      .select([
+        'guest.id AS guest_id',
+        'guest.full_name AS full_name',
+        'guest.email AS email',
+        'guest.confirmed_at AS confirmed_at',
+        'COALESCE(COUNT(companion.id), 0) AS companions_count',
+        "COALESCE(STRING_AGG(companion.full_name, ' | ' ORDER BY companion.id), '') AS companions_names",
+      ])
+      .where('guest.event_id = :eventId', { eventId: filters.eventId })
+
+    this.applyAdminFilters(query, filters)
+
+    query
+      .groupBy('guest.id')
+      .addGroupBy('guest.full_name')
+      .addGroupBy('guest.email')
+      .addGroupBy('guest.confirmed_at')
+      .orderBy('guest.confirmed_at', 'DESC')
+      .addOrderBy('guest.id', 'ASC')
+      .limit(filters.limit)
+
+    const rows = await query.getRawMany<{
+      guest_id: number | string
+      full_name: string
+      email: string
+      confirmed_at: Date | string
+      companions_count: number | string
+      companions_names: string
+    }>()
+
+    return rows.map((row) => {
+      const companionsCount = Number(row.companions_count)
+
+      return {
+        guestId: Number(row.guest_id),
+        fullName: row.full_name,
+        email: row.email,
+        companionsCount,
+        totalPeople: companionsCount + 1,
+        companionsNames: row.companions_names,
+        confirmedAt: new Date(row.confirmed_at),
+      }
+    })
   }
 
   private applyAdminFilters(

@@ -60,6 +60,28 @@ export type AdminPurchaseConfirmationSummary = {
   buyersUnique: number
 }
 
+export type AdminPurchaseConfirmationExportFilters = {
+  eventId: number
+  search?: string
+  marketplace?: AdminPurchaseConfirmationMarketplace
+  confirmedFrom?: Date
+  confirmedTo?: Date
+  limit: number
+}
+
+export type AdminPurchaseConfirmationExportProjection = {
+  confirmationId: number
+  giftId: number
+  giftName: string
+  marketplace: AdminPurchaseConfirmationMarketplace
+  guestName: string
+  guestEmail: string
+  quantity: number
+  orderNumber: string | null
+  notes: string | null
+  confirmedAt: Date
+}
+
 export class PurchaseConfirmationRepository {
   constructor(
     private readonly repository: Repository<PurchaseConfirmation> = AppDataSource.getRepository(
@@ -219,6 +241,64 @@ export class PurchaseConfirmationRepository {
       unitsConfirmed: Number(row?.units_confirmed ?? 0),
       buyersUnique: Number(row?.buyers_unique ?? 0),
     }
+  }
+
+  async findAdminPurchasesForExport(
+    filters: AdminPurchaseConfirmationExportFilters
+  ): Promise<AdminPurchaseConfirmationExportProjection[]> {
+    const query = this.repository
+      .createQueryBuilder('confirmation')
+      .innerJoin('gifts', 'gift', 'gift.id = confirmation.gift_id')
+      .select([
+        'confirmation.id AS confirmation_id',
+        'confirmation.gift_id AS gift_id',
+        'gift.name AS gift_name',
+        'gift.marketplace AS marketplace',
+        'confirmation.guest_name AS guest_name',
+        'confirmation.guest_email AS guest_email',
+        'confirmation.quantity AS quantity',
+        'confirmation.order_number AS order_number',
+        'confirmation.notes AS notes',
+        'confirmation.confirmed_at AS confirmed_at',
+      ])
+      .where('gift.event_id = :eventId', { eventId: filters.eventId })
+
+    this.applyAdminFilters(query, {
+      search: filters.search,
+      giftId: undefined,
+      marketplace: filters.marketplace,
+      confirmedFrom: filters.confirmedFrom,
+      confirmedTo: filters.confirmedTo,
+    })
+
+    query.orderBy('confirmation.confirmed_at', 'DESC').addOrderBy('confirmation.id', 'ASC')
+    query.limit(filters.limit)
+
+    const rows = await query.getRawMany<{
+      confirmation_id: number | string
+      gift_id: number | string
+      gift_name: string
+      marketplace: AdminPurchaseConfirmationMarketplace
+      guest_name: string
+      guest_email: string
+      quantity: number | string
+      order_number: string | null
+      notes: string | null
+      confirmed_at: Date | string
+    }>()
+
+    return rows.map((row) => ({
+      confirmationId: Number(row.confirmation_id),
+      giftId: Number(row.gift_id),
+      giftName: row.gift_name,
+      marketplace: row.marketplace,
+      guestName: row.guest_name,
+      guestEmail: row.guest_email,
+      quantity: Number(row.quantity),
+      orderNumber: row.order_number,
+      notes: row.notes,
+      confirmedAt: new Date(row.confirmed_at),
+    }))
   }
 
   private applyAdminFilters(
