@@ -65,6 +65,13 @@ export class AdminDonationListFetchFailedException extends InternalServerExcepti
   }
 }
 
+export class AdminExportReportFailedException extends InternalServerException {
+  constructor(message = 'Nao foi possivel exportar o relatorio agora.') {
+    super([{ code: ErrorCode.ADMIN_EXPORT_REPORT_FAILED, message }])
+    this.name = 'AdminExportReportFailedException'
+  }
+}
+
 export class RsvpEventUnavailableException extends NotFoundException {
   constructor(message = 'Evento indisponivel para confirmacao no momento.') {
     super([{ code: ErrorCode.RSVP_EVENT_UNAVAILABLE, message }])

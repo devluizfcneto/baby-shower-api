@@ -11,6 +11,7 @@ import router from '@adonisjs/core/services/router'
 import { middleware } from '#start/kernel'
 
 const AuthController = () => import('#controllers/auth_controller')
+const AdminExportController = () => import('#controllers/admin_export_controller')
 const AdminGuestController = () => import('#controllers/admin_guest_controller')
 const AdminGiftController = () => import('#controllers/admin_gift_controller')
 const AdminDonationController = () => import('#controllers/admin_donation_controller')
@@ -73,6 +74,14 @@ router
       .get('/donations', [AdminDonationController, 'index'])
       .use(middleware.auth())
       .as('adminDonation.index')
+    router
+      .get('/export/guests', [AdminExportController, 'guests'])
+      .use(middleware.auth())
+      .as('adminExport.guests')
+    router
+      .get('/export/purchases', [AdminExportController, 'purchases'])
+      .use(middleware.auth())
+      .as('adminExport.purchases')
     router
       .post('/gifts', [AdminGiftController, 'store'])
       .use(middleware.auth())
