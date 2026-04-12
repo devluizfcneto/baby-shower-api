@@ -37,7 +37,8 @@ export class AdminQueryNormalizerService {
     from: Date | undefined,
     to: Date | undefined,
     fromField: string,
-    toField: string
+    toField: string,
+    code: ErrorCode = ErrorCode.INVALID_QUERY_FILTER_RANGE
   ): void {
     if (!from || !to || from <= to) {
       return
@@ -45,7 +46,7 @@ export class AdminQueryNormalizerService {
 
     throw validationError([
       {
-        code: ErrorCode.INVALID_QUERY_FILTER_RANGE,
+        code,
         field: `${fromField}|${toField}`,
         message: `${fromField} must be less than or equal to ${toField}`,
       },
