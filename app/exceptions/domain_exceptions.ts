@@ -58,6 +58,13 @@ export class AdminPurchaseConfirmationListFetchFailedException extends InternalS
   }
 }
 
+export class AdminDonationListFetchFailedException extends InternalServerException {
+  constructor(message = 'Nao foi possivel carregar a lista de doacoes agora.') {
+    super([{ code: ErrorCode.ADMIN_DONATION_LIST_FETCH_FAILED, message }])
+    this.name = 'AdminDonationListFetchFailedException'
+  }
+}
+
 export class RsvpEventUnavailableException extends NotFoundException {
   constructor(message = 'Evento indisponivel para confirmacao no momento.') {
     super([{ code: ErrorCode.RSVP_EVENT_UNAVAILABLE, message }])

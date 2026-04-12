@@ -13,6 +13,7 @@ import { middleware } from '#start/kernel'
 const AuthController = () => import('#controllers/auth_controller')
 const AdminGuestController = () => import('#controllers/admin_guest_controller')
 const AdminGiftController = () => import('#controllers/admin_gift_controller')
+const AdminDonationController = () => import('#controllers/admin_donation_controller')
 const AdminPurchaseConfirmationController = () =>
   import('#controllers/admin_purchase_confirmation_controller')
 const DonationController = () => import('#controllers/donation_controller')
@@ -68,6 +69,10 @@ router
       .get('/purchase-confirmations', [AdminPurchaseConfirmationController, 'index'])
       .use(middleware.auth())
       .as('adminPurchaseConfirmation.index')
+    router
+      .get('/donations', [AdminDonationController, 'index'])
+      .use(middleware.auth())
+      .as('adminDonation.index')
     router
       .post('/gifts', [AdminGiftController, 'store'])
       .use(middleware.auth())
