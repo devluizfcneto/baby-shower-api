@@ -16,7 +16,7 @@ test.group('RsvpService', () => {
     let createManyCallCount = 0
 
     const service = new RsvpService(
-      { findEventIdByCode: async () => 10 } as any,
+      { findMailContextByCode: async () => ({ id: 10, name: 'Evento', adminEmail: null }) } as any,
       {
         existsByEventAndEmail: async () => false,
         createGuest: async () => ({
@@ -87,7 +87,7 @@ test.group('RsvpService', () => {
 
   test('throws RSVP_EVENT_UNAVAILABLE when no active event exists', async ({ assert }) => {
     const service = new RsvpService(
-      { findEventIdByCode: async () => null } as any,
+      { findMailContextByCode: async () => null } as any,
       { existsByEventAndEmail: async () => false } as any,
       {} as any,
       {} as any,
@@ -113,7 +113,7 @@ test.group('RsvpService', () => {
 
   test('maps unique violation to RSVP_ALREADY_CONFIRMED', async ({ assert }) => {
     const service = new RsvpService(
-      { findEventIdByCode: async () => 10 } as any,
+      { findMailContextByCode: async () => ({ id: 10, name: 'Evento', adminEmail: null }) } as any,
       { existsByEventAndEmail: async () => false } as any,
       {} as any,
       {} as any,
@@ -148,7 +148,7 @@ test.group('RsvpService', () => {
 
   test('does not fail confirmation when notification dispatch fails', async ({ assert }) => {
     const service = new RsvpService(
-      { findEventIdByCode: async () => 10 } as any,
+      { findMailContextByCode: async () => ({ id: 10, name: 'Evento', adminEmail: null }) } as any,
       {
         existsByEventAndEmail: async () => false,
         createGuest: async () => ({
@@ -197,7 +197,7 @@ test.group('RsvpService', () => {
 
   test('limits companions to max 2 in service layer', async ({ assert }) => {
     const service = new RsvpService(
-      { findEventIdByCode: async () => 10 } as any,
+      { findMailContextByCode: async () => ({ id: 10, name: 'Evento', adminEmail: null }) } as any,
       { existsByEventAndEmail: async () => false } as any,
       { createManyByGuestId: async () => [] } as any,
       {} as any,
@@ -225,7 +225,7 @@ test.group('RsvpService', () => {
     const sentCompanions: string[] = []
 
     const service = new RsvpService(
-      { findEventIdByCode: async () => 10 } as any,
+      { findMailContextByCode: async () => ({ id: 10, name: 'Evento', adminEmail: null }) } as any,
       {
         existsByEventAndEmail: async () => false,
         createGuest: async () => ({

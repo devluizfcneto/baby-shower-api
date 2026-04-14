@@ -6,7 +6,7 @@ import { Guest } from '#entities/guest'
 import { AppDataSource } from '#services/database_service'
 import { RsvpNotificationService } from '#services/rsvp_notification_service'
 
-test.group('POST /api/rsvp', (group) => {
+test.group('POST /api/events/:eventCode/rsvp', (group) => {
   group.setup(async () => {
     if (!AppDataSource.isInitialized) {
       await AppDataSource.initialize()
@@ -37,7 +37,7 @@ test.group('POST /api/rsvp', (group) => {
   test('confirms presence without companions', async ({ client, assert }) => {
     const event = await createEvent()
 
-    const response = await client.post(`/api/rsvp/${event.code}`).json({
+    const response = await client.post(`/api/events/${event.code}/rsvp`).json({
       fullName: 'Convidado Teste',
       email: 'convidado.teste@example.com',
     })
@@ -65,7 +65,7 @@ test.group('POST /api/rsvp', (group) => {
   test('confirms presence with companions', async ({ client, assert }) => {
     const event = await createEvent()
 
-    const response = await client.post(`/api/rsvp/${event.code}`).json({
+    const response = await client.post(`/api/events/${event.code}/rsvp`).json({
       fullName: 'Convidado Teste',
       email: 'convidado.acompanhantes@example.com',
       companions: [
@@ -103,7 +103,7 @@ test.group('POST /api/rsvp', (group) => {
   test('returns 422 for invalid payload', async ({ client }) => {
     const event = await createEvent()
 
-    const response = await client.post(`/api/rsvp/${event.code}`).json({
+    const response = await client.post(`/api/events/${event.code}/rsvp`).json({
       fullName: 'A',
       email: 'invalid-email',
       companions: [{ fullName: 'B', email: 'invalid-email' }],
@@ -122,7 +122,7 @@ test.group('POST /api/rsvp', (group) => {
   test('returns 422 when more than 2 companions are provided', async ({ client }) => {
     const event = await createEvent()
 
-    const response = await client.post(`/api/rsvp/${event.code}`).json({
+    const response = await client.post(`/api/events/${event.code}/rsvp`).json({
       fullName: 'Convidado Teste',
       email: 'limite@example.com',
       companions: [
@@ -138,7 +138,7 @@ test.group('POST /api/rsvp', (group) => {
   test('returns 404 when eventCode path param is missing', async ({ client }) => {
     await createEvent()
 
-    const response = await client.post('/api/rsvp').json({
+    const response = await client.post('/api/events').json({
       fullName: 'Convidado Sem Query',
       email: 'sem-query@example.com',
     })
@@ -154,10 +154,10 @@ test.group('POST /api/rsvp', (group) => {
       email: 'duplicado@example.com',
     }
 
-    const firstResponse = await client.post(`/api/rsvp/${event.code}`).json(payload)
+    const firstResponse = await client.post(`/api/events/${event.code}/rsvp`).json(payload)
     firstResponse.assertStatus(201)
 
-    const secondResponse = await client.post(`/api/rsvp/${event.code}`).json(payload)
+    const secondResponse = await client.post(`/api/events/${event.code}/rsvp`).json(payload)
     secondResponse.assertStatus(409)
     secondResponse.assertBodyContains({
       errors: [
@@ -183,7 +183,7 @@ test.group('POST /api/rsvp', (group) => {
     }
 
     try {
-      const response = await client.post(`/api/rsvp/${event.code}`).json({
+      const response = await client.post(`/api/events/${event.code}/rsvp`).json({
         fullName: 'Convidado Sem Email',
         email: 'sem-email@example.com',
       })
@@ -207,7 +207,7 @@ test.group('POST /api/rsvp', (group) => {
   }) => {
     const event = await createEvent()
 
-    const firstResponse = await client.post(`/api/rsvp/${event.code}`).json({
+    const firstResponse = await client.post(`/api/events/${event.code}/rsvp`).json({
       fullName: 'Convidado 1',
       email: 'convidado1@example.com',
       companions: [{ fullName: 'Acompanhante Unico', email: 'duplicado.companion@example.com' }],
@@ -215,7 +215,7 @@ test.group('POST /api/rsvp', (group) => {
 
     firstResponse.assertStatus(201)
 
-    const secondResponse = await client.post(`/api/rsvp/${event.code}`).json({
+    const secondResponse = await client.post(`/api/events/${event.code}/rsvp`).json({
       fullName: 'Convidado 2',
       email: 'convidado2@example.com',
       companions: [
@@ -254,7 +254,7 @@ test.group('POST /api/rsvp', (group) => {
   }) => {
     const event = await createEvent()
 
-    const firstResponse = await client.post(`/api/rsvp/${event.code}`).json({
+    const firstResponse = await client.post(`/api/events/${event.code}/rsvp`).json({
       fullName: 'Convidado Original',
       email: 'convidado.original@example.com',
       companions: [{ fullName: 'Acompanhante Existente', email: 'email.repetido@example.com' }],
@@ -262,7 +262,7 @@ test.group('POST /api/rsvp', (group) => {
 
     firstResponse.assertStatus(201)
 
-    const secondResponse = await client.post(`/api/rsvp/${event.code}`).json({
+    const secondResponse = await client.post(`/api/events/${event.code}/rsvp`).json({
       fullName: 'Convidado Conflitante',
       email: 'email.repetido@example.com',
     })
