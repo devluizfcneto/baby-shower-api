@@ -33,10 +33,12 @@ export type EventConfigProjection = Pick<
   | 'pixKeyMom'
   | 'pixQrcodeDad'
   | 'pixQrcodeMom'
+  | 'adminId'
   | 'updatedAt'
 >
 
 export type UpsertEventConfigInput = {
+  adminId: number | null
   name: string
   date: Date
   venueAddress: string
@@ -87,6 +89,17 @@ export class EventRepository {
     return result?.id ?? null
   }
 
+  async findOwnedEventId(eventId: number, adminId: number): Promise<number | null> {
+    const result = await this.repository
+      .createQueryBuilder('event')
+      .select('event.id', 'id')
+      .where('event.id = :eventId', { eventId })
+      .andWhere('event.adminId = :adminId', { adminId })
+      .getRawOne<{ id: number }>()
+
+    return result?.id ?? null
+  }
+
   async findLatestEventId(): Promise<number | null> {
     const result = await this.repository
       .createQueryBuilder('event')
@@ -114,10 +127,34 @@ export class EventRepository {
         'event.pixKeyMom',
         'event.pixQrcodeDad',
         'event.pixQrcodeMom',
+        'event.adminId',
         'event.updatedAt',
       ])
       .orderBy('event.id', 'DESC')
       .limit(1)
+      .getOne()
+  }
+
+  async findConfigById(eventId: number): Promise<EventConfigProjection | null> {
+    return this.repository
+      .createQueryBuilder('event')
+      .select([
+        'event.id',
+        'event.code',
+        'event.name',
+        'event.date',
+        'event.venueAddress',
+        'event.deliveryAddress',
+        'event.mapsLink',
+        'event.coverImageUrl',
+        'event.pixKeyDad',
+        'event.pixKeyMom',
+        'event.pixQrcodeDad',
+        'event.pixQrcodeMom',
+        'event.adminId',
+        'event.updatedAt',
+      ])
+      .where('event.id = :eventId', { eventId })
       .getOne()
   }
 
@@ -127,6 +164,7 @@ export class EventRepository {
       .insert()
       .into(Event)
       .values({
+        adminId: input.adminId,
         name: input.name,
         date: input.date,
         venueAddress: input.venueAddress,
@@ -141,6 +179,7 @@ export class EventRepository {
       .returning([
         'id',
         'code',
+        'admin_id',
         'name',
         'date',
         'venue_address',
@@ -158,6 +197,8 @@ export class EventRepository {
     const raw = result.raw[0] as {
       id: number
       code: string
+      admin_id?: number | string | null
+      adminId?: number | string | null
       name: string
       date: string | Date
       venue_address: string
@@ -201,6 +242,8 @@ export class EventRepository {
   private mapRawProjection(raw: {
     id: number
     code: string
+    admin_id?: number | string | null
+    adminId?: number | string | null
     name: string
     date: string | Date
     venue_address?: string
@@ -231,10 +274,12 @@ export class EventRepository {
     const pixQrcodeDad = raw.pix_qrcode_dad ?? raw.pixQrcodeDad ?? null
     const pixQrcodeMom = raw.pix_qrcode_mom ?? raw.pixQrcodeMom ?? null
     const updatedAt = raw.updated_at ?? raw.updatedAt ?? new Date()
+    const adminIdRaw = raw.admin_id ?? raw.adminId ?? null
 
     return {
       id: Number(raw.id),
       code: raw.code,
+      adminId: adminIdRaw === null ? null : Number(adminIdRaw),
       name: raw.name,
       date: new Date(raw.date),
       venueAddress,

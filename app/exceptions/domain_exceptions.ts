@@ -1,6 +1,11 @@
 import { ErrorCode } from '#constants/error_code'
 
-import { ConflictException, InternalServerException, NotFoundException } from './http_exceptions.js'
+import {
+  ConflictException,
+  ForbiddenException,
+  InternalServerException,
+  NotFoundException,
+} from './http_exceptions.js'
 
 export class EventNotFoundException extends NotFoundException {
   constructor(message = 'Em breve!') {
@@ -13,6 +18,13 @@ export class EventFetchFailedException extends InternalServerException {
   constructor(message = 'Nao foi possivel carregar as informacoes do evento agora.') {
     super([{ code: ErrorCode.EVENT_FETCH_FAILED, message }])
     this.name = 'EventFetchFailedException'
+  }
+}
+
+export class EventForbiddenException extends ForbiddenException {
+  constructor(message = 'Voce nao possui acesso a este evento.') {
+    super([{ code: ErrorCode.EVENT_FORBIDDEN, message }])
+    this.name = 'EventForbiddenException'
   }
 }
 

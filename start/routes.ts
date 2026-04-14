@@ -25,10 +25,19 @@ const PurchaseConfirmationController = () => import('#controllers/purchase_confi
 const RsvpController = () => import('#controllers/rsvp_controller')
 
 router.get('/', async () => 'It works!')
-router.get('/api/event/:eventCode', [EventController, 'showPublic'])
-router.get('/api/gifts/:eventCode', [GiftController, 'indexPublic'])
-router.post('/api/gifts/:giftId/confirm-purchase', [PurchaseConfirmationController, 'store'])
-router.post('/api/donations', [DonationController, 'store'])
+router
+  .group(() => {
+    router.get('/:eventCode', [EventController, 'showPublic'])
+    router.get('/:eventCode/gifts', [GiftController, 'indexPublic'])
+    router.post('/:eventCode/gifts/:giftId/confirm-purchase', [
+      PurchaseConfirmationController,
+      'store',
+    ])
+    router.post('/:eventCode/donations', [DonationController, 'store'])
+    router.post('/:eventCode/rsvp', [RsvpController, 'store'])
+  })
+  .prefix('/api/events')
+  .use(middleware.eventScope())
 
 router
   .group(() => {
@@ -51,53 +60,30 @@ router
     router.post('/refresh', [AuthController, 'refresh']).as('adminAuth.refresh')
     router.get('/me', [AuthController, 'show']).use(middleware.auth()).as('adminAuth.me')
     router
-      .get('/event', [EventAdminController, 'show'])
+      .group(() => {
+        router.get('/', [EventAdminController, 'show']).as('adminEvent.show')
+        router.put('/', [EventAdminController, 'update']).as('adminEvent.update')
+        router.get('/gifts', [AdminGiftController, 'index']).as('adminGift.index')
+        router.get('/guests', [AdminGuestController, 'index']).as('adminGuest.index')
+        router
+          .get('/purchase-confirmations', [AdminPurchaseConfirmationController, 'index'])
+          .as('adminPurchaseConfirmation.index')
+        router.get('/donations', [AdminDonationController, 'index']).as('adminDonation.index')
+        router.get('/export/guests', [AdminExportController, 'guests']).as('adminExport.guests')
+        router
+          .get('/export/purchases', [AdminExportController, 'purchases'])
+          .as('adminExport.purchases')
+        router.post('/gifts', [AdminGiftController, 'store']).as('adminGift.store')
+        router.put('/gifts/:id', [AdminGiftController, 'update']).as('adminGift.update')
+        router
+          .put('/gifts/:id/block', [AdminGiftController, 'toggleBlock'])
+          .as('adminGift.toggleBlock')
+        router.delete('/gifts/:id', [AdminGiftController, 'destroy']).as('adminGift.destroy')
+      })
+      .prefix('/events/:eventId')
       .use(middleware.auth())
-      .as('adminEvent.show')
-    router
-      .put('/event', [EventAdminController, 'update'])
-      .use(middleware.auth())
-      .as('adminEvent.update')
-    router
-      .get('/gifts', [AdminGiftController, 'index'])
-      .use(middleware.auth())
-      .as('adminGift.index')
-    router
-      .get('/guests', [AdminGuestController, 'index'])
-      .use(middleware.auth())
-      .as('adminGuest.index')
-    router
-      .get('/purchase-confirmations', [AdminPurchaseConfirmationController, 'index'])
-      .use(middleware.auth())
-      .as('adminPurchaseConfirmation.index')
-    router
-      .get('/donations', [AdminDonationController, 'index'])
-      .use(middleware.auth())
-      .as('adminDonation.index')
-    router
-      .get('/export/guests', [AdminExportController, 'guests'])
-      .use(middleware.auth())
-      .as('adminExport.guests')
-    router
-      .get('/export/purchases', [AdminExportController, 'purchases'])
-      .use(middleware.auth())
-      .as('adminExport.purchases')
-    router
-      .post('/gifts', [AdminGiftController, 'store'])
-      .use(middleware.auth())
-      .as('adminGift.store')
-    router
-      .put('/gifts/:id', [AdminGiftController, 'update'])
-      .use(middleware.auth())
-      .as('adminGift.update')
-    router
-      .put('/gifts/:id/block', [AdminGiftController, 'toggleBlock'])
-      .use(middleware.auth())
-      .as('adminGift.toggleBlock')
-    router
-      .delete('/gifts/:id', [AdminGiftController, 'destroy'])
-      .use(middleware.auth())
-      .as('adminGift.destroy')
+      .use(middleware.eventOwnership())
+
     router.post('/logout', [AuthController, 'logout']).use(middleware.auth()).as('adminAuth.logout')
     router
       .post('/logout-all', [AuthController, 'logoutAll'])
@@ -105,5 +91,3 @@ router
       .as('adminAuth.logoutAll')
   })
   .prefix('/api/admin')
-
-router.post('/api/rsvp/:eventCode', [RsvpController, 'store'])

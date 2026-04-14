@@ -36,4 +36,6 @@ router.use([() => import('@adonisjs/core/bodyparser_middleware')])
  */
 export const middleware = router.named({
   auth: () => import('#middleware/auth_middleware'),
+  eventScope: () => import('#middleware/event_scope_middleware'),
+  eventOwnership: () => import('#middleware/event_ownership_middleware'),
 })
