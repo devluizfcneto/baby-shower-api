@@ -3,6 +3,7 @@ import { ErrorCode } from '#constants/error_code'
 import {
   ConflictException,
   ForbiddenException,
+  GoneException,
   InternalServerException,
   NotFoundException,
 } from './http_exceptions.js'
@@ -25,6 +26,13 @@ export class EventForbiddenException extends ForbiddenException {
   constructor(message = 'Voce nao possui acesso a este evento.') {
     super([{ code: ErrorCode.EVENT_FORBIDDEN, message }])
     this.name = 'EventForbiddenException'
+  }
+}
+
+export class EventArchivedException extends GoneException {
+  constructor(message = 'Este evento foi encerrado.') {
+    super([{ code: ErrorCode.EVENT_ARCHIVED, message }])
+    this.name = 'EventArchivedException'
   }
 }
 

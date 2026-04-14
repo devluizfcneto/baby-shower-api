@@ -78,3 +78,14 @@ export class InternalServerException extends AppException {
     return new InternalServerException([{ message, code, field }])
   }
 }
+
+export class GoneException extends AppException {
+  constructor(errors: AppErrorItem[]) {
+    super(410, errors)
+    this.name = 'GoneException'
+  }
+
+  static single(message: string, code: string = ErrorCode.NOT_FOUND, field?: string) {
+    return new GoneException([{ message, code, field }])
+  }
+}

@@ -2,7 +2,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import type { NextFn } from '@adonisjs/core/types/http'
 import { inject } from '@adonisjs/core'
 
-import { EventNotFoundException } from '#exceptions/domain_exceptions'
+import { EventArchivedException, EventNotFoundException } from '#exceptions/domain_exceptions'
 import { EventRepository } from '#repositories/event_repository'
 
 type EventScopePayload = {
@@ -21,15 +21,19 @@ export default class EventScopeMiddleware {
       throw new EventNotFoundException()
     }
 
-    const eventId = await this.eventRepository.findEventIdByCode(eventCode)
+    const event = await this.eventRepository.findByCode(eventCode)
 
-    if (!eventId) {
+    if (!event) {
       throw new EventNotFoundException()
+    }
+
+    if (event.isArchived) {
+      throw new EventArchivedException()
     }
 
     const extended = ctx as HttpContext & { eventScope: EventScopePayload }
     extended.eventScope = {
-      eventId,
+      eventId: event.id,
       eventCode,
     }
 
