@@ -61,6 +61,7 @@
   },
   "dependencies": {
     "@adonisjs/core": "^7.3.0",
+    "@adonisjs/mail": "^10.2.0",
     "@vinejs/vine": "^4.3.0",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.20.0",
