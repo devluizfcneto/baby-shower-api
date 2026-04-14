@@ -7,6 +7,7 @@ import {
   GiftNotFoundException,
   PurchaseConfirmationPersistFailedException,
 } from '#exceptions/domain_exceptions'
+import { EventRepository } from '#repositories/event_repository'
 import { GiftRepository } from '#repositories/gift_repository'
 import { PurchaseConfirmationRepository } from '#repositories/purchase_confirmation_repository'
 import { BestEffortNotificationService } from '#services/best_effort_notification_service'
@@ -55,6 +56,7 @@ type ConfirmPurchaseResponse = {
 @inject()
 export class PurchaseConfirmationService {
   constructor(
+    private readonly eventRepository: EventRepository,
     private readonly giftRepository: GiftRepository,
     private readonly purchaseConfirmationRepository: PurchaseConfirmationRepository,
     private readonly notificationService: PurchaseNotificationService,
@@ -85,6 +87,9 @@ export class PurchaseConfirmationService {
     }
 
     const normalized = this.normalizeInput(payload)
+    const eventContext = isScopedByEventCode
+      ? await this.eventRepository.findMailContextByCode(eventCodeOrGiftId as string)
+      : null
 
     try {
       const transactionResult = await AppDataSource.transaction(async (manager) => {
@@ -136,6 +141,8 @@ export class PurchaseConfirmationService {
       })
 
       await this.dispatchNotificationsBestEffort({
+        eventName: eventContext?.name,
+        adminEmail: eventContext?.adminEmail,
         giftId: transactionResult.gift.id,
         giftName: transactionResult.gift.name,
         guestName: transactionResult.confirmation.guestName,
@@ -193,6 +200,8 @@ export class PurchaseConfirmationService {
   }
 
   private async dispatchNotificationsBestEffort(payload: {
+    eventName?: string
+    adminEmail?: string | null
     giftId: number
     giftName: string
     guestName: string

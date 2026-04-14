@@ -66,14 +66,14 @@ export class RsvpService {
       ])
     }
 
-    const eventId = await this.eventRepository.findEventIdByCode(eventCode)
+    const eventContext = await this.eventRepository.findMailContextByCode(eventCode)
 
-    if (!eventId) {
+    if (!eventContext?.id) {
       throw new RsvpEventUnavailableException()
     }
 
     const alreadyConfirmed = await this.guestRepository.existsByEventAndEmail(
-      eventId,
+      eventContext.id,
       normalizedInput.email
     )
     if (alreadyConfirmed) {
@@ -85,7 +85,7 @@ export class RsvpService {
         async (manager) => {
           const guest = await this.guestRepository.createGuest(
             {
-              eventId,
+              eventId: eventContext.id,
               fullName: normalizedInput.fullName,
               email: normalizedInput.email,
             },
@@ -93,7 +93,7 @@ export class RsvpService {
           )
 
           const companions = await this.companionRepository.createManyByGuestId(
-            eventId,
+            eventContext.id,
             guest.id,
             normalizedInput.companions,
             manager
@@ -104,6 +104,8 @@ export class RsvpService {
       )
 
       await this.dispatchNotificationsBestEffort({
+        eventName: eventContext.name,
+        adminEmail: eventContext.adminEmail,
         guestFullName: createdGuest.fullName,
         guestEmail: createdGuest.email,
         companions: insertedCompanions,
@@ -136,6 +138,8 @@ export class RsvpService {
   }
 
   private async dispatchNotificationsBestEffort(payload: {
+    eventName?: string
+    adminEmail?: string | null
     guestFullName: string
     guestEmail: string
     companions: Array<{
