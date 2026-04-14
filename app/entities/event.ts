@@ -62,6 +62,9 @@ export class Event {
   @Column({ name: 'pix_qrcode_mom', type: 'text', nullable: true })
   declare pixQrcodeMom: string | null
 
+  @Column({ name: 'is_archived', type: 'boolean', default: false })
+  declare isArchived: boolean
+
   @CreateDateColumn({ name: 'created_at' })
   declare createdAt: Date
 
