@@ -1,4 +1,5 @@
 import { Event } from '#entities/event'
+import { User } from '#entities/user'
 import { AppDataSource } from '#services/database_service'
 import { InputSanitizerService } from '#services/input_sanitizer_service'
 
@@ -10,13 +11,17 @@ export default class EventsTableSeeder implements Seeder {
 
   async run() {
     const eventRepository = AppDataSource.getRepository(Event)
+    const userRepository = AppDataSource.getRepository(User)
     const existingEvent = await eventRepository.findOne({ where: {} })
 
     if (existingEvent) {
       return
     }
 
+    const owner = await userRepository.findOne({ where: {}, order: { id: 'ASC' } })
+
     const event = eventRepository.create({
+      adminId: owner?.id ?? null,
       code: (process.env.SEED_EVENT_CODE ?? 'babyshower2026event1').trim(),
       name: this.inputSanitizerService.normalizeRequiredText(
         process.env.SEED_EVENT_NAME ?? 'Cha de bebe da Maria'
