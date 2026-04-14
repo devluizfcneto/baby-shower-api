@@ -63,14 +63,38 @@ export class PurchaseConfirmationService {
   ) {}
 
   async confirmPurchase(
+    eventCode: string,
     giftId: number,
     input: ConfirmPurchaseInput
+  ): Promise<ConfirmPurchaseResponse>
+  async confirmPurchase(
+    giftId: number,
+    input: ConfirmPurchaseInput
+  ): Promise<ConfirmPurchaseResponse>
+  async confirmPurchase(
+    eventCodeOrGiftId: string | number,
+    giftIdOrInput: number | ConfirmPurchaseInput,
+    input?: ConfirmPurchaseInput
   ): Promise<ConfirmPurchaseResponse> {
-    const normalized = this.normalizeInput(input)
+    const isScopedByEventCode = typeof eventCodeOrGiftId === 'string'
+    const giftId = isScopedByEventCode ? (giftIdOrInput as number) : eventCodeOrGiftId
+    const payload = isScopedByEventCode ? input : (giftIdOrInput as ConfirmPurchaseInput)
+
+    if (!payload) {
+      throw new PurchaseConfirmationPersistFailedException()
+    }
+
+    const normalized = this.normalizeInput(payload)
 
     try {
       const transactionResult = await AppDataSource.transaction(async (manager) => {
-        const gift = await this.giftRepository.findByIdForUpdate(giftId, manager)
+        const gift = isScopedByEventCode
+          ? await this.giftRepository.findByIdForUpdateAndEventCode(
+              giftId,
+              eventCodeOrGiftId,
+              manager
+            )
+          : await this.giftRepository.findByIdForUpdate(giftId, manager)
 
         if (!gift) {
           throw new GiftNotFoundException()

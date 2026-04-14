@@ -37,8 +37,17 @@ export class DonationService {
     private readonly inputSanitizerService: InputSanitizerService
   ) {}
 
-  async registerDonation(input: RegisterDonationInput): Promise<RegisterDonationResponse> {
-    const normalized = this.normalizeInput(input)
+  async registerDonation(
+    eventCode: string,
+    input: RegisterDonationInput
+  ): Promise<RegisterDonationResponse>
+  async registerDonation(input: RegisterDonationInput): Promise<RegisterDonationResponse>
+  async registerDonation(
+    eventCodeOrInput: string | RegisterDonationInput,
+    input?: RegisterDonationInput
+  ): Promise<RegisterDonationResponse> {
+    const scopedInput = typeof eventCodeOrInput === 'string' ? (input ?? {}) : eventCodeOrInput
+    const normalized = this.normalizeInput(scopedInput)
 
     if (!this.hasMeaningfulPayload(normalized)) {
       throw validationError([
@@ -50,7 +59,10 @@ export class DonationService {
       ])
     }
 
-    const eventId = await this.eventRepository.findLatestEventId()
+    const eventId =
+      typeof eventCodeOrInput === 'string'
+        ? await this.eventRepository.findEventIdByCode(eventCodeOrInput)
+        : await this.eventRepository.findLatestEventId()
     if (!eventId) {
       throw new DonationEventUnavailableException()
     }

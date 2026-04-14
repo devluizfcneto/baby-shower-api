@@ -59,11 +59,11 @@ export class EventConfigService {
     private readonly inputSanitizerService: InputSanitizerService
   ) {}
 
-  async getCurrentConfig(): Promise<EventConfigResponse> {
+  async getConfigById(eventId: number): Promise<EventConfigResponse> {
     let event: EventConfigProjection | null
 
     try {
-      event = await this.eventRepository.findCurrentConfig()
+      event = await this.eventRepository.findConfigById(eventId)
     } catch {
       throw new EventConfigUpdateFailedException(
         'Nao foi possivel carregar as configuracoes do evento agora.'
@@ -79,10 +79,39 @@ export class EventConfigService {
     }
   }
 
-  async updateConfig(input: EventConfigPayload): Promise<EventConfigResponse> {
+  async getCurrentConfig(): Promise<EventConfigResponse> {
     const current = await this.eventRepository.findCurrentConfig()
 
-    const normalizedPatch = this.normalizePatch(input)
+    if (!current) {
+      throw new EventConfigNotFoundException()
+    }
+
+    return this.getConfigById(current.id)
+  }
+
+  async updateConfig(eventId: number, input: EventConfigPayload): Promise<EventConfigResponse>
+  async updateConfig(input: EventConfigPayload): Promise<EventConfigResponse>
+  async updateConfig(
+    eventIdOrInput: number | EventConfigPayload,
+    input?: EventConfigPayload
+  ): Promise<EventConfigResponse> {
+    const currentConfig =
+      typeof eventIdOrInput === 'number' ? null : await this.eventRepository.findCurrentConfig()
+
+    const eventId = typeof eventIdOrInput === 'number' ? eventIdOrInput : currentConfig?.id
+    const scopedInput = (typeof eventIdOrInput === 'number' ? input : eventIdOrInput) ?? {}
+
+    if (!eventId) {
+      throw new EventConfigNotFoundException()
+    }
+
+    const current = await this.eventRepository.findConfigById(eventId)
+
+    if (!current) {
+      throw new EventConfigNotFoundException()
+    }
+
+    const normalizedPatch = this.normalizePatch(scopedInput)
     const hasPatch = this.hasPatch(normalizedPatch)
 
     if (!hasPatch) {
@@ -96,9 +125,7 @@ export class EventConfigService {
     this.validateRequiredFields(next)
 
     try {
-      const updated = current
-        ? await this.updateExistingConfig(current, normalizedPatch)
-        : await this.eventRepository.createConfig(next)
+      const updated = await this.updateExistingConfig(current, normalizedPatch)
 
       return {
         data: this.eventPayloadMapperService.toAdminEventData(updated),
@@ -181,6 +208,7 @@ export class EventConfigService {
     patch: UpdateEventConfigInput
   ): UpsertEventConfigInput {
     return {
+      adminId: current?.adminId ?? null,
       name: patch.name ?? current?.name ?? '',
       date: patch.date ?? current?.date ?? new Date(''),
       venueAddress: patch.venueAddress ?? current?.venueAddress ?? '',

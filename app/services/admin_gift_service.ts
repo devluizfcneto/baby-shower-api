@@ -29,6 +29,10 @@ type AdminGiftListResponse = {
   }
 }
 
+type AdminGiftMutationResponse = {
+  data: ReturnType<GiftPayloadMapperService['toAdminGiftData']>
+}
+
 type CreateAdminGiftPayload = {
   name: string
   description?: string
@@ -54,9 +58,23 @@ export class AdminGiftService {
     private readonly inputSanitizerService: InputSanitizerService
   ) {}
 
-  async list(): Promise<AdminGiftListResponse> {
+  async list(eventId: number): Promise<AdminGiftListResponse>
+  async list(): Promise<AdminGiftListResponse>
+  async list(eventId?: number): Promise<AdminGiftListResponse> {
+    const scopedEventId = eventId ?? (await this.eventRepository.findLatestEventId())
+
+    if (!scopedEventId) {
+      return {
+        data: [],
+        meta: {
+          total: 0,
+          source: 'database',
+        },
+      }
+    }
+
     try {
-      const gifts = await this.giftRepository.findAdminByLatestEvent()
+      const gifts = await this.giftRepository.findAdminByEventId(scopedEventId)
 
       return {
         data: gifts.map((gift) => this.giftPayloadMapperService.toAdminGiftData(gift)),
@@ -70,14 +88,24 @@ export class AdminGiftService {
     }
   }
 
-  async create(payload: CreateAdminGiftPayload) {
-    const eventId = await this.eventRepository.findLatestEventId()
+  async create(eventId: number, payload: CreateAdminGiftPayload): Promise<AdminGiftMutationResponse>
+  async create(payload: CreateAdminGiftPayload): Promise<AdminGiftMutationResponse>
+  async create(
+    eventIdOrPayload: number | CreateAdminGiftPayload,
+    payload?: CreateAdminGiftPayload
+  ): Promise<AdminGiftMutationResponse> {
+    const scopedEventId =
+      typeof eventIdOrPayload === 'number'
+        ? eventIdOrPayload
+        : await this.eventRepository.findLatestEventId()
 
-    if (!eventId) {
+    const resolvedPayload = typeof eventIdOrPayload === 'number' ? payload : eventIdOrPayload
+
+    if (!scopedEventId || !resolvedPayload) {
       throw new EventNotFoundException('Evento nao encontrado para associar o presente.')
     }
 
-    const normalizedInput = this.normalizeCreatePayload(payload, eventId)
+    const normalizedInput = this.normalizeCreatePayload(resolvedPayload, scopedEventId)
 
     try {
       const created = await this.giftRepository.createGift(normalizedInput)
@@ -93,14 +121,33 @@ export class AdminGiftService {
     }
   }
 
-  async update(giftId: number, payload: UpdateAdminGiftPayload) {
+  async update(
+    eventId: number,
+    giftId: number,
+    payload: UpdateAdminGiftPayload
+  ): Promise<AdminGiftMutationResponse>
+  async update(giftId: number, payload: UpdateAdminGiftPayload): Promise<AdminGiftMutationResponse>
+  async update(
+    eventIdOrGiftId: number,
+    giftIdOrPayload: number | UpdateAdminGiftPayload,
+    payload?: UpdateAdminGiftPayload
+  ): Promise<AdminGiftMutationResponse> {
+    const isScopedCall = payload !== undefined
+    const eventId = isScopedCall ? eventIdOrGiftId : await this.eventRepository.findLatestEventId()
+    const giftId = isScopedCall ? (giftIdOrPayload as number) : eventIdOrGiftId
+    const patch = isScopedCall ? payload : (giftIdOrPayload as UpdateAdminGiftPayload)
+
+    if (!eventId) {
+      throw new EventNotFoundException('Evento nao encontrado para atualizar o presente.')
+    }
+
     const current = await this.giftRepository.findById(giftId)
 
-    if (!current) {
+    if (!current || current.eventId !== eventId) {
       throw new GiftNotFoundException()
     }
 
-    const normalizedInput = this.normalizeUpdatePayload(payload)
+    const normalizedInput = this.normalizeUpdatePayload(patch)
     this.validateNonEmptyPatch(normalizedInput)
 
     const nextMaxQuantity = normalizedInput.maxQuantity ?? current.maxQuantity
@@ -131,21 +178,40 @@ export class AdminGiftService {
     }
   }
 
-  async toggleBlock(giftId: number, isBlocked: boolean) {
+  async toggleBlock(
+    eventId: number,
+    giftId: number,
+    isBlocked: boolean
+  ): Promise<AdminGiftMutationResponse>
+  async toggleBlock(giftId: number, isBlocked: boolean): Promise<AdminGiftMutationResponse>
+  async toggleBlock(
+    eventIdOrGiftId: number,
+    giftIdOrIsBlocked: number | boolean,
+    isBlocked?: boolean
+  ): Promise<AdminGiftMutationResponse> {
+    const isScopedCall = isBlocked !== undefined
+    const eventId = isScopedCall ? eventIdOrGiftId : await this.eventRepository.findLatestEventId()
+    const giftId = isScopedCall ? (giftIdOrIsBlocked as number) : eventIdOrGiftId
+    const blocked = isScopedCall ? isBlocked : (giftIdOrIsBlocked as boolean)
+
+    if (!eventId) {
+      throw new EventNotFoundException('Evento nao encontrado para atualizar o presente.')
+    }
+
     const current = await this.giftRepository.findById(giftId)
 
-    if (!current) {
+    if (!current || current.eventId !== eventId) {
       throw new GiftNotFoundException()
     }
 
-    if (current.isBlocked === isBlocked) {
+    if (current.isBlocked === blocked) {
       return {
         data: this.giftPayloadMapperService.toAdminGiftData(current),
       }
     }
 
     try {
-      const updated = await this.giftRepository.updateGiftById(giftId, { isBlocked })
+      const updated = await this.giftRepository.updateGiftById(giftId, { isBlocked: blocked })
 
       if (!updated) {
         throw new GiftNotFoundException()
@@ -167,21 +233,31 @@ export class AdminGiftService {
     }
   }
 
-  async delete(giftId: number): Promise<void> {
-    const current = await this.giftRepository.findById(giftId)
+  async delete(eventId: number, giftId: number): Promise<void>
+  async delete(giftId: number): Promise<void>
+  async delete(eventIdOrGiftId: number, giftId?: number): Promise<void> {
+    const isScopedCall = giftId !== undefined
+    const eventId = isScopedCall ? eventIdOrGiftId : await this.eventRepository.findLatestEventId()
+    const scopedGiftId = isScopedCall ? giftId : eventIdOrGiftId
 
-    if (!current) {
+    if (!eventId) {
+      throw new EventNotFoundException('Evento nao encontrado para remover o presente.')
+    }
+
+    const current = await this.giftRepository.findById(scopedGiftId)
+
+    if (!current || current.eventId !== eventId) {
       throw new GiftNotFoundException()
     }
 
-    const hasConfirmations = await this.giftRepository.hasPurchaseConfirmations(giftId)
+    const hasConfirmations = await this.giftRepository.hasPurchaseConfirmations(scopedGiftId)
 
     if (hasConfirmations) {
       throw new GiftHasPurchaseConfirmationsException()
     }
 
     try {
-      const deleted = await this.giftRepository.deleteGiftById(giftId)
+      const deleted = await this.giftRepository.deleteGiftById(scopedGiftId)
 
       if (!deleted) {
         throw new GiftDeleteFailedException()

@@ -4,9 +4,13 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm'
+
+import { User } from '#entities/user'
 
 @Entity({ name: 'events' })
 export class Event {
@@ -23,6 +27,13 @@ export class Event {
     default: () => 'SUBSTRING(MD5(RANDOM()::text), 1, 20)',
   })
   declare code: string
+
+  @Column({ name: 'admin_id', type: 'int', nullable: true })
+  declare adminId: number | null
+
+  @ManyToOne(() => User, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'admin_id' })
+  declare admin: User | null
 
   @Column({ type: 'timestamp' })
   declare date: Date

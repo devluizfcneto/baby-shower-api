@@ -73,13 +73,30 @@ export class AdminExportService {
     private readonly inputSanitizerService: InputSanitizerService
   ) {}
 
-  async exportGuestsCsv(input: ExportGuestsInput): Promise<ExportCsvPayload> {
-    const normalized = this.normalizeCommonInput(input)
+  async exportGuestsCsv(eventId: number, input: ExportGuestsInput): Promise<ExportCsvPayload>
+  async exportGuestsCsv(input: ExportGuestsInput): Promise<ExportCsvPayload>
+  async exportGuestsCsv(
+    eventIdOrInput: number | ExportGuestsInput,
+    input?: ExportGuestsInput
+  ): Promise<ExportCsvPayload> {
+    if (typeof eventIdOrInput === 'number') {
+      return this.exportGuestsCsvByEvent(eventIdOrInput, input ?? {})
+    }
+
     const eventId = await this.eventRepository.findLatestEventId()
 
     if (!eventId) {
       return this.buildGuestsResponse([])
     }
+
+    return this.exportGuestsCsvByEvent(eventId, eventIdOrInput)
+  }
+
+  private async exportGuestsCsvByEvent(
+    eventId: number,
+    input: ExportGuestsInput
+  ): Promise<ExportCsvPayload> {
+    const normalized = this.normalizeCommonInput(input)
 
     try {
       const rows = await this.guestRepository.findAdminGuestsForExport({
@@ -96,13 +113,30 @@ export class AdminExportService {
     }
   }
 
-  async exportPurchasesCsv(input: ExportPurchasesInput): Promise<ExportCsvPayload> {
-    const normalized = this.normalizeCommonInput(input)
+  async exportPurchasesCsv(eventId: number, input: ExportPurchasesInput): Promise<ExportCsvPayload>
+  async exportPurchasesCsv(input: ExportPurchasesInput): Promise<ExportCsvPayload>
+  async exportPurchasesCsv(
+    eventIdOrInput: number | ExportPurchasesInput,
+    input?: ExportPurchasesInput
+  ): Promise<ExportCsvPayload> {
+    if (typeof eventIdOrInput === 'number') {
+      return this.exportPurchasesCsvByEvent(eventIdOrInput, input ?? {})
+    }
+
     const eventId = await this.eventRepository.findLatestEventId()
 
     if (!eventId) {
       return this.buildPurchasesResponse([])
     }
+
+    return this.exportPurchasesCsvByEvent(eventId, eventIdOrInput)
+  }
+
+  private async exportPurchasesCsvByEvent(
+    eventId: number,
+    input: ExportPurchasesInput
+  ): Promise<ExportCsvPayload> {
+    const normalized = this.normalizeCommonInput(input)
 
     try {
       const rows = await this.purchaseConfirmationRepository.findAdminPurchasesForExport({

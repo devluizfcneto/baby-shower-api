@@ -8,8 +8,8 @@ import {
   type AdminGuestSortBy,
   type AdminGuestSortDir,
 } from '#repositories/guest_repository'
-import { AdminQueryNormalizerService } from '#services/admin_query_normalizer_service'
 import { EventRepository } from '#repositories/event_repository'
+import { AdminQueryNormalizerService } from '#services/admin_query_normalizer_service'
 import { InputSanitizerService } from '#services/input_sanitizer_service'
 
 type ListAdminGuestsInput = {
@@ -85,13 +85,23 @@ export class AdminGuestService {
     private readonly inputSanitizerService: InputSanitizerService
   ) {}
 
-  async list(input: ListAdminGuestsInput): Promise<ListAdminGuestsResponse> {
-    const normalizedInput = this.normalizeInput(input)
-    const eventId = await this.eventRepository.findLatestEventId()
+  async list(eventId: number, input: ListAdminGuestsInput): Promise<ListAdminGuestsResponse>
+  async list(input: ListAdminGuestsInput): Promise<ListAdminGuestsResponse>
+  async list(
+    eventIdOrInput: number | ListAdminGuestsInput,
+    input?: ListAdminGuestsInput
+  ): Promise<ListAdminGuestsResponse> {
+    const eventId =
+      typeof eventIdOrInput === 'number'
+        ? eventIdOrInput
+        : await this.eventRepository.findLatestEventId()
+    const resolvedInput = (typeof eventIdOrInput === 'number' ? input : eventIdOrInput) ?? {}
 
     if (!eventId) {
-      return this.buildEmptyResponse(normalizedInput)
+      return this.buildEmptyResponse(this.normalizeInput(resolvedInput))
     }
+
+    const normalizedInput = this.normalizeInput(resolvedInput)
 
     try {
       const [rows, total] = await Promise.all([

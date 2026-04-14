@@ -78,13 +78,30 @@ export class AdminDonationService {
     private readonly inputSanitizerService: InputSanitizerService
   ) {}
 
-  async list(input: ListAdminDonationsInput): Promise<ListAdminDonationsResponse> {
-    const normalized = this.normalizeInput(input)
+  async list(eventId: number, input: ListAdminDonationsInput): Promise<ListAdminDonationsResponse>
+  async list(input: ListAdminDonationsInput): Promise<ListAdminDonationsResponse>
+  async list(
+    eventIdOrInput: number | ListAdminDonationsInput,
+    input?: ListAdminDonationsInput
+  ): Promise<ListAdminDonationsResponse> {
+    if (typeof eventIdOrInput === 'number') {
+      return this.listByEvent(eventIdOrInput, input ?? {})
+    }
+
     const eventId = await this.eventRepository.findLatestEventId()
 
     if (!eventId) {
-      return this.buildEmptyResponse(normalized)
+      return this.buildEmptyResponse(this.normalizeInput(eventIdOrInput))
     }
+
+    return this.listByEvent(eventId, eventIdOrInput)
+  }
+
+  private async listByEvent(
+    eventId: number,
+    input: ListAdminDonationsInput
+  ): Promise<ListAdminDonationsResponse> {
+    const normalized = this.normalizeInput(input)
 
     try {
       const [rows, total, summary] = await Promise.all([

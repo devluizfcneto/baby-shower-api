@@ -150,7 +150,7 @@ export class GiftRepository {
     return { eventFound: true, gifts }
   }
 
-  async findAdminByLatestEvent(): Promise<GiftAdminProjection[]> {
+  async findAdminByEventId(eventId: number): Promise<GiftAdminProjection[]> {
     const rawRows = await this.repository
       .createQueryBuilder('gift')
       .select([
@@ -172,17 +172,7 @@ export class GiftRepository {
         'gift.created_at AS created_at',
         'gift.updated_at AS updated_at',
       ])
-      .where((qb) => {
-        const latestEventSubquery = qb
-          .subQuery()
-          .select('event.id')
-          .from(Event, 'event')
-          .orderBy('event.id', 'DESC')
-          .limit(1)
-          .getQuery()
-
-        return `gift.event_id = ${latestEventSubquery}`
-      })
+      .where('gift.event_id = :eventId', { eventId })
       .orderBy('gift.sort_order', 'ASC')
       .addOrderBy('gift.id', 'ASC')
       .getRawMany<GiftAdminRaw>()
@@ -308,6 +298,21 @@ export class GiftRepository {
       .getRepository(Gift)
       .createQueryBuilder('gift')
       .where('gift.id = :giftId', { giftId })
+      .setLock('pessimistic_write')
+      .getOne()
+  }
+
+  async findByIdForUpdateAndEventCode(
+    giftId: number,
+    eventCode: string,
+    manager: EntityManager
+  ): Promise<Gift | null> {
+    return manager
+      .getRepository(Gift)
+      .createQueryBuilder('gift')
+      .innerJoin(Event, 'event', 'event.id = gift.event_id')
+      .where('gift.id = :giftId', { giftId })
+      .andWhere('event.code = :eventCode', { eventCode })
       .setLock('pessimistic_write')
       .getOne()
   }

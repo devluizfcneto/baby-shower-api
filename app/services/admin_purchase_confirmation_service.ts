@@ -81,14 +81,34 @@ export class AdminPurchaseConfirmationService {
   ) {}
 
   async list(
+    eventId: number,
     input: ListAdminPurchaseConfirmationsInput
+  ): Promise<ListAdminPurchaseConfirmationsResponse>
+  async list(
+    input: ListAdminPurchaseConfirmationsInput
+  ): Promise<ListAdminPurchaseConfirmationsResponse>
+  async list(
+    eventIdOrInput: number | ListAdminPurchaseConfirmationsInput,
+    input?: ListAdminPurchaseConfirmationsInput
   ): Promise<ListAdminPurchaseConfirmationsResponse> {
-    const normalized = this.normalizeInput(input)
+    if (typeof eventIdOrInput === 'number') {
+      return this.listByEvent(eventIdOrInput, input ?? {})
+    }
+
     const eventId = await this.eventRepository.findLatestEventId()
 
     if (!eventId) {
-      return this.buildEmptyResponse(normalized)
+      return this.buildEmptyResponse(this.normalizeInput(eventIdOrInput))
     }
+
+    return this.listByEvent(eventId, eventIdOrInput)
+  }
+
+  private async listByEvent(
+    eventId: number,
+    input: ListAdminPurchaseConfirmationsInput
+  ): Promise<ListAdminPurchaseConfirmationsResponse> {
+    const normalized = this.normalizeInput(input)
 
     try {
       const [rows, total, summary] = await Promise.all([
