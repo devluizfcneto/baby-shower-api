@@ -36,6 +36,7 @@ export default defineConfig({
   */
   providers: [
     () => import('@adonisjs/core/providers/app_provider'),
+    () => import('@adonisjs/core/providers/edge_provider'),
     () => import('@adonisjs/core/providers/hash_provider'),
     () => import('@adonisjs/mail/mail_provider'),
     () => import('#providers/typeorm_provider'),
@@ -88,4 +89,11 @@ export default defineConfig({
   hooks: {
     init: [indexEntities()],
   },
+
+  metaFiles: [
+    {
+      pattern: 'resources/views/**/*.edge',
+      reloadServer: false,
+    },
+  ],
 })
