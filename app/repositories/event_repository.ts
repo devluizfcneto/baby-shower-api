@@ -88,6 +88,8 @@ export type EventMailContextProjection = {
   code: string
   name: string
   adminEmail: string | null
+  date: Date
+  venueAddress: string
 }
 
 export type UpsertEventConfigInput = {
@@ -445,10 +447,19 @@ export class EventRepository {
         'event.id AS id',
         'event.code AS code',
         'event.name AS name',
+        'event.date AS date',
+        'event.venue_address AS venue_address',
         'user.email AS admin_email',
       ])
       .where('event.code = :eventCode', { eventCode })
-      .getRawOne<{ id: number; code: string; name: string; admin_email: string | null }>()
+      .getRawOne<{
+        id: number
+        code: string
+        name: string
+        date: string | Date
+        venue_address: string
+        admin_email: string | null
+      }>()
 
     if (!raw) {
       return null
@@ -458,6 +469,8 @@ export class EventRepository {
       id: Number(raw.id),
       code: raw.code,
       name: raw.name,
+      date: new Date(raw.date),
+      venueAddress: raw.venue_address,
       adminEmail: raw.admin_email,
     }
   }

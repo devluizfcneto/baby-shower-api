@@ -105,6 +105,8 @@ export class RsvpService {
 
       await this.dispatchNotificationsBestEffort({
         eventName: eventContext.name,
+        eventStartAt: eventContext.date,
+        eventVenueAddress: eventContext.venueAddress,
         adminEmail: eventContext.adminEmail,
         guestFullName: createdGuest.fullName,
         guestEmail: createdGuest.email,
@@ -139,6 +141,8 @@ export class RsvpService {
 
   private async dispatchNotificationsBestEffort(payload: {
     eventName?: string
+    eventStartAt?: Date
+    eventVenueAddress?: string
     adminEmail?: string | null
     guestFullName: string
     guestEmail: string
