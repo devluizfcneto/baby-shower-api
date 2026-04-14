@@ -11,6 +11,8 @@ import router from '@adonisjs/core/services/router'
 import { middleware } from '#start/kernel'
 
 const AuthController = () => import('#controllers/auth_controller')
+const AdminEventManagementController = () =>
+  import('#controllers/admin_event_management_controller')
 const AdminExportController = () => import('#controllers/admin_export_controller')
 const AdminGuestController = () => import('#controllers/admin_guest_controller')
 const AdminGiftController = () => import('#controllers/admin_gift_controller')
@@ -59,6 +61,28 @@ router
     router.post('/login', [AuthController, 'login']).as('adminAuth.login')
     router.post('/refresh', [AuthController, 'refresh']).as('adminAuth.refresh')
     router.get('/me', [AuthController, 'show']).use(middleware.auth()).as('adminAuth.me')
+    router
+      .group(() => {
+        router.get('/events', [AdminEventManagementController, 'index']).as('adminEvents.index')
+        router.post('/events', [AdminEventManagementController, 'store']).as('adminEvents.store')
+        router
+          .get('/events/by-code/:eventCode', [AdminEventManagementController, 'showByCode'])
+          .as('adminEvents.showByCode')
+        router
+          .patch('/events/by-code/:eventCode', [AdminEventManagementController, 'updateByCode'])
+          .as('adminEvents.updateByCode')
+        router
+          .patch('/events/by-code/:eventCode/archive', [
+            AdminEventManagementController,
+            'archiveByCode',
+          ])
+          .as('adminEvents.archiveByCode')
+        router
+          .delete('/events/by-code/:eventCode', [AdminEventManagementController, 'destroyByCode'])
+          .as('adminEvents.destroyByCode')
+      })
+      .use(middleware.auth())
+
     router
       .group(() => {
         router.get('/', [EventAdminController, 'show']).as('adminEvent.show')

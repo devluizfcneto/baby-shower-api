@@ -16,6 +16,7 @@ test.group('PurchaseConfirmationService', () => {
     let updatedQuantity = 0
 
     const service = new PurchaseConfirmationService(
+      {} as any,
       {
         findByIdForUpdate: async () => ({
           id: 10,
@@ -89,6 +90,7 @@ test.group('PurchaseConfirmationService', () => {
 
   test('throws GIFT_NOT_FOUND when gift does not exist', async ({ assert }) => {
     const service = new PurchaseConfirmationService(
+      {} as any,
       {
         findByIdForUpdate: async () => null,
       } as any,
@@ -119,6 +121,7 @@ test.group('PurchaseConfirmationService', () => {
 
   test('throws GIFT_BLOCKED when gift is blocked', async ({ assert }) => {
     const service = new PurchaseConfirmationService(
+      {} as any,
       {
         findByIdForUpdate: async () => ({
           id: 10,
@@ -155,6 +158,7 @@ test.group('PurchaseConfirmationService', () => {
 
   test('throws GIFT_LIMIT_EXCEEDED when requested quantity exceeds limit', async ({ assert }) => {
     const service = new PurchaseConfirmationService(
+      {} as any,
       {
         findByIdForUpdate: async () => ({
           id: 10,
@@ -192,6 +196,7 @@ test.group('PurchaseConfirmationService', () => {
 
   test('does not fail when notification dispatch fails', async ({ assert }) => {
     const service = new PurchaseConfirmationService(
+      {} as any,
       {
         findByIdForUpdate: async () => ({
           id: 10,
@@ -245,6 +250,7 @@ test.group('PurchaseConfirmationService', () => {
     assert,
   }) => {
     const service = new PurchaseConfirmationService(
+      {} as any,
       {} as any,
       {} as any,
       {} as any,

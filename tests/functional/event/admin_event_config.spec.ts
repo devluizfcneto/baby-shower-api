@@ -38,12 +38,13 @@ test.group('Admin Event Config', (group) => {
     return response.body().accessToken as string
   }
 
-  test('GET /api/admin/event returns current config for authenticated admin', async ({
+  test('GET /api/admin/events/:eventId returns config for authenticated owner', async ({
     client,
   }) => {
-    await createAdmin()
+    const admin = await createAdmin()
 
-    await AppDataSource.getRepository(Event).save({
+    const event = await AppDataSource.getRepository(Event).save({
+      adminId: admin.id,
       code: 'babyshower2026event1',
       name: 'Cha da Helena',
       date: new Date('2026-06-18T15:00:00.000Z'),
@@ -60,7 +61,7 @@ test.group('Admin Event Config', (group) => {
     const accessToken = await login(client)
 
     const response = await client
-      .get('/api/admin/event')
+      .get(`/api/admin/events/${event.id}`)
       .header('authorization', `Bearer ${accessToken}`)
 
     response.assertStatus(200)
@@ -72,15 +73,16 @@ test.group('Admin Event Config', (group) => {
     })
   })
 
-  test('GET /api/admin/event returns 401 when unauthenticated', async ({ client }) => {
-    const response = await client.get('/api/admin/event')
+  test('GET /api/admin/events/:eventId returns 401 when unauthenticated', async ({ client }) => {
+    const response = await client.get('/api/admin/events/1')
     response.assertStatus(401)
   })
 
-  test('PUT /api/admin/event updates existing config', async ({ client }) => {
-    await createAdmin()
+  test('PUT /api/admin/events/:eventId updates existing config', async ({ client }) => {
+    const admin = await createAdmin()
 
     const event = await AppDataSource.getRepository(Event).save({
+      adminId: admin.id,
       code: 'babyshower2026event1',
       name: 'Cha Antigo',
       date: new Date('2026-06-18T15:00:00.000Z'),
@@ -97,7 +99,7 @@ test.group('Admin Event Config', (group) => {
     const accessToken = await login(client)
 
     const response = await client
-      .put('/api/admin/event')
+      .put(`/api/admin/events/${event.id}`)
       .header('authorization', `Bearer ${accessToken}`)
       .json({
         name: 'Cha da Helena',
@@ -114,42 +116,34 @@ test.group('Admin Event Config', (group) => {
     })
   })
 
-  test('PUT /api/admin/event creates first config when no event exists', async ({
-    client,
-    assert,
-  }) => {
-    await createAdmin()
+  test('PUT /api/admin/events/:eventId returns 403 for non-owner admin', async ({ client }) => {
+    const owner = await createAdmin('owner@baby-shower.local')
+    await createAdmin('admin@baby-shower.local')
+
+    const event = await AppDataSource.getRepository(Event).save({
+      adminId: owner.id,
+      code: 'babyshower2026event1',
+      name: 'Cha Antigo',
+      date: new Date('2026-06-18T15:00:00.000Z'),
+      venueAddress: 'Endereco Antigo',
+      deliveryAddress: null,
+      mapsLink: null,
+      coverImageUrl: null,
+      pixKeyDad: null,
+      pixKeyMom: null,
+      pixQrcodeDad: null,
+      pixQrcodeMom: null,
+    })
+
     const accessToken = await login(client)
 
     const response = await client
-      .put('/api/admin/event')
+      .put(`/api/admin/events/${event.id}`)
       .header('authorization', `Bearer ${accessToken}`)
       .json({
-        name: 'Cha da Helena',
-        date: '2026-06-18T15:00:00.000Z',
-        venueAddress: 'Rua Exemplo, 123 - Sao Paulo/SP',
+        name: 'Novo Nome',
       })
 
-    response.assertStatus(200)
-
-    const saved = await AppDataSource.getRepository(Event).findOne({ where: {} })
-    assert.isNotNull(saved)
-    assert.equal(saved?.name, 'Cha da Helena')
-  })
-
-  test('PUT /api/admin/event returns 422 when required fields are missing for first config', async ({
-    client,
-  }) => {
-    await createAdmin()
-    const accessToken = await login(client)
-
-    const response = await client
-      .put('/api/admin/event')
-      .header('authorization', `Bearer ${accessToken}`)
-      .json({
-        deliveryAddress: 'Rua Teste',
-      })
-
-    response.assertStatus(422)
+    response.assertStatus(403)
   })
 })

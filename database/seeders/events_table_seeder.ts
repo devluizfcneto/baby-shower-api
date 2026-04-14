@@ -51,6 +51,7 @@ export default class EventsTableSeeder implements Seeder {
       pixQrcodeMom: this.inputSanitizerService.normalizeOptionalText(
         process.env.SEED_EVENT_PIX_QRCODE_MOM
       ),
+      isArchived: String(process.env.SEED_EVENT_IS_ARCHIVED ?? 'false').toLowerCase() === 'true',
     })
 
     await eventRepository.save(event)

@@ -6,7 +6,7 @@ import { PurchaseConfirmation } from '#entities/purchase_confirmation'
 import { PurchaseNotificationService } from '#services/purchase_notification_service'
 import { AppDataSource } from '#services/database_service'
 
-test.group('POST /api/gifts/:giftId/confirm-purchase', (group) => {
+test.group('POST /api/events/:eventCode/gifts/:giftId/confirm-purchase', (group) => {
   group.setup(async () => {
     if (!AppDataSource.isInitialized) {
       await AppDataSource.initialize()
@@ -38,7 +38,7 @@ test.group('POST /api/gifts/:giftId/confirm-purchase', (group) => {
   async function createGift(input?: Partial<Gift>) {
     const event = await createEvent()
 
-    return AppDataSource.getRepository(Gift).save({
+    const gift = await AppDataSource.getRepository(Gift).save({
       eventId: event.id,
       name: 'Kit Mamadeiras',
       description: 'Kit de mamadeiras anticolica',
@@ -55,21 +55,25 @@ test.group('POST /api/gifts/:giftId/confirm-purchase', (group) => {
       sortOrder: 1,
       ...input,
     })
+
+    return { gift, event }
   }
 
   test('returns 201 and increments confirmed quantity with persisted confirmation', async ({
     client,
     assert,
   }) => {
-    const gift = await createGift()
+    const { gift, event } = await createGift()
 
-    const response = await client.post(`/api/gifts/${gift.id}/confirm-purchase`).json({
-      guestName: 'Convidado Exemplo',
-      guestEmail: 'convidado@email.com',
-      quantity: 1,
-      orderNumber: 'MLB-123456',
-      notes: 'Entrega no endereco do evento',
-    })
+    const response = await client
+      .post(`/api/events/${event.code}/gifts/${gift.id}/confirm-purchase`)
+      .json({
+        guestName: 'Convidado Exemplo',
+        guestEmail: 'convidado@email.com',
+        quantity: 1,
+        orderNumber: 'MLB-123456',
+        notes: 'Entrega no endereco do evento',
+      })
 
     response.assertStatus(201)
     response.assertBodyContains({
@@ -93,10 +97,14 @@ test.group('POST /api/gifts/:giftId/confirm-purchase', (group) => {
   })
 
   test('returns 404 with GIFT_NOT_FOUND when gift does not exist', async ({ client }) => {
-    const response = await client.post('/api/gifts/9999/confirm-purchase').json({
-      guestName: 'Convidado Exemplo',
-      guestEmail: 'convidado@email.com',
-    })
+    const event = await createEvent('purchasenotfound01')
+
+    const response = await client
+      .post(`/api/events/${event.code}/gifts/9999/confirm-purchase`)
+      .json({
+        guestName: 'Convidado Exemplo',
+        guestEmail: 'convidado@email.com',
+      })
 
     response.assertStatus(404)
     response.assertBodyContains({
@@ -109,12 +117,14 @@ test.group('POST /api/gifts/:giftId/confirm-purchase', (group) => {
   })
 
   test('returns 409 with GIFT_BLOCKED when gift is blocked', async ({ client }) => {
-    const gift = await createGift({ isBlocked: true })
+    const { gift, event } = await createGift({ isBlocked: true })
 
-    const response = await client.post(`/api/gifts/${gift.id}/confirm-purchase`).json({
-      guestName: 'Convidado Exemplo',
-      guestEmail: 'convidado@email.com',
-    })
+    const response = await client
+      .post(`/api/events/${event.code}/gifts/${gift.id}/confirm-purchase`)
+      .json({
+        guestName: 'Convidado Exemplo',
+        guestEmail: 'convidado@email.com',
+      })
 
     response.assertStatus(409)
     response.assertBodyContains({
@@ -127,13 +137,15 @@ test.group('POST /api/gifts/:giftId/confirm-purchase', (group) => {
   })
 
   test('returns 409 with GIFT_LIMIT_EXCEEDED when quantity exceeds limit', async ({ client }) => {
-    const gift = await createGift({ maxQuantity: 1, confirmedQuantity: 1 })
+    const { gift, event } = await createGift({ maxQuantity: 1, confirmedQuantity: 1 })
 
-    const response = await client.post(`/api/gifts/${gift.id}/confirm-purchase`).json({
-      guestName: 'Convidado Exemplo',
-      guestEmail: 'convidado@email.com',
-      quantity: 1,
-    })
+    const response = await client
+      .post(`/api/events/${event.code}/gifts/${gift.id}/confirm-purchase`)
+      .json({
+        guestName: 'Convidado Exemplo',
+        guestEmail: 'convidado@email.com',
+        quantity: 1,
+      })
 
     response.assertStatus(409)
     response.assertBodyContains({
@@ -146,19 +158,21 @@ test.group('POST /api/gifts/:giftId/confirm-purchase', (group) => {
   })
 
   test('returns 422 when payload is invalid', async ({ client }) => {
-    const gift = await createGift()
+    const { gift, event } = await createGift()
 
-    const response = await client.post(`/api/gifts/${gift.id}/confirm-purchase`).json({
-      guestName: 'X',
-      guestEmail: 'invalid-email',
-      quantity: 0,
-    })
+    const response = await client
+      .post(`/api/events/${event.code}/gifts/${gift.id}/confirm-purchase`)
+      .json({
+        guestName: 'X',
+        guestEmail: 'invalid-email',
+        quantity: 0,
+      })
 
     response.assertStatus(422)
   })
 
   test('persists confirmation even when notification fails', async ({ client, assert }) => {
-    const gift = await createGift()
+    const { gift, event } = await createGift()
 
     const originalMethod = PurchaseNotificationService.prototype.sendAdminPurchaseNotification
     PurchaseNotificationService.prototype.sendAdminPurchaseNotification = async () => {
@@ -166,10 +180,12 @@ test.group('POST /api/gifts/:giftId/confirm-purchase', (group) => {
     }
 
     try {
-      const response = await client.post(`/api/gifts/${gift.id}/confirm-purchase`).json({
-        guestName: 'Convidado Exemplo',
-        guestEmail: 'convidado@email.com',
-      })
+      const response = await client
+        .post(`/api/events/${event.code}/gifts/${gift.id}/confirm-purchase`)
+        .json({
+          guestName: 'Convidado Exemplo',
+          guestEmail: 'convidado@email.com',
+        })
 
       response.assertStatus(201)
 
@@ -186,15 +202,15 @@ test.group('POST /api/gifts/:giftId/confirm-purchase', (group) => {
     client,
     assert,
   }) => {
-    const gift = await createGift({ maxQuantity: 1, confirmedQuantity: 0 })
+    const { gift, event } = await createGift({ maxQuantity: 1, confirmedQuantity: 0 })
 
     const [responseA, responseB] = await Promise.all([
-      client.post(`/api/gifts/${gift.id}/confirm-purchase`).json({
+      client.post(`/api/events/${event.code}/gifts/${gift.id}/confirm-purchase`).json({
         guestName: 'Convidado A',
         guestEmail: 'convidado.a@email.com',
         quantity: 1,
       }),
-      client.post(`/api/gifts/${gift.id}/confirm-purchase`).json({
+      client.post(`/api/events/${event.code}/gifts/${gift.id}/confirm-purchase`).json({
         guestName: 'Convidado B',
         guestEmail: 'convidado.b@email.com',
         quantity: 1,

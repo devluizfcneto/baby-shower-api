@@ -4,7 +4,7 @@ import { Event } from '#entities/event'
 import { AppDataSource } from '#services/database_service'
 import { EventRepository } from '#repositories/event_repository'
 
-test.group('GET /api/event', (group) => {
+test.group('GET /api/events/:eventCode', (group) => {
   group.setup(async () => {
     if (!AppDataSource.isInitialized) {
       await AppDataSource.initialize()
@@ -30,7 +30,7 @@ test.group('GET /api/event', (group) => {
       pixQrcodeMom: null,
     })
 
-    const response = await client.get(`/api/event/${event.code}`)
+    const response = await client.get(`/api/events/${event.code}`)
 
     response.assertStatus(200)
     const body = response.body()
@@ -40,7 +40,7 @@ test.group('GET /api/event', (group) => {
   })
 
   test('returns 404 with EVENT_NOT_FOUND when no event exists', async ({ client }) => {
-    const response = await client.get('/api/event/missingeventcode')
+    const response = await client.get('/api/events/missingeventcode')
 
     response.assertStatus(404)
     response.assertBodyContains({
@@ -54,13 +54,27 @@ test.group('GET /api/event', (group) => {
   })
 
   test('returns 500 with EVENT_FETCH_FAILED when repository fails', async ({ client }) => {
+    await AppDataSource.getRepository(Event).save({
+      code: 'babyshower2026event1',
+      name: 'Cha da Helena',
+      date: new Date('2026-06-18T15:00:00.000Z'),
+      venueAddress: 'Rua Exemplo, 123 - Sao Paulo/SP',
+      deliveryAddress: null,
+      mapsLink: null,
+      coverImageUrl: null,
+      pixKeyDad: null,
+      pixKeyMom: null,
+      pixQrcodeDad: null,
+      pixQrcodeMom: null,
+    })
+
     const originalMethod = EventRepository.prototype.findPublicEventByCode
     EventRepository.prototype.findPublicEventByCode = async () => {
       throw new Error('forced failure')
     }
 
     try {
-      const response = await client.get('/api/event/babyshower2026event1')
+      const response = await client.get('/api/events/babyshower2026event1')
       response.assertStatus(500)
       response.assertBodyContains({
         errors: [
@@ -75,12 +89,15 @@ test.group('GET /api/event', (group) => {
   })
 
   test('returns 404 when eventCode path param is missing', async ({ client }) => {
-    const response = await client.get('/api/event')
+    const response = await client.get('/api/events')
 
     response.assertStatus(404)
   })
 
-  test('executes only one SQL query per request', async ({ client, assert }) => {
+  test('executes two SQL queries per request (scope + public projection)', async ({
+    client,
+    assert,
+  }) => {
     const event = await AppDataSource.getRepository(Event).save({
       code: 'evttestevent001',
       name: 'Cha da Helena',
@@ -118,9 +135,9 @@ test.group('GET /api/event', (group) => {
     }
 
     try {
-      const response = await client.get(`/api/event/${event.code}`)
+      const response = await client.get(`/api/events/${event.code}`)
       response.assertStatus(200)
-      assert.equal(queryCount, 1)
+      assert.equal(queryCount, 2)
     } finally {
       ;(AppDataSource as any).createQueryRunner = originalCreateQueryRunner
     }
@@ -145,7 +162,7 @@ test.group('GET /api/event', (group) => {
 
     for (let i = 0; i < 30; i++) {
       const start = performance.now()
-      const response = await client.get(`/api/event/${event.code}`)
+      const response = await client.get(`/api/events/${event.code}`)
       response.assertStatus(200)
       durations.push(performance.now() - start)
     }

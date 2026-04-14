@@ -5,6 +5,7 @@
 
 export const controllers = {
   AdminDonation: () => import('#controllers/admin_donation_controller'),
+  AdminEventManagement: () => import('#controllers/admin_event_management_controller'),
   AdminExport: () => import('#controllers/admin_export_controller'),
   AdminGift: () => import('#controllers/admin_gift_controller'),
   AdminGuest: () => import('#controllers/admin_guest_controller'),
