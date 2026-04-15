@@ -149,6 +149,7 @@ export class PurchaseConfirmationService {
         guestEmail: transactionResult.confirmation.guestEmail,
         quantity: transactionResult.confirmation.quantity,
         orderNumber: transactionResult.confirmation.orderNumber,
+        notes: transactionResult.confirmation.notes,
         confirmedAt: transactionResult.confirmation.confirmedAt,
       })
 
@@ -208,9 +209,14 @@ export class PurchaseConfirmationService {
     guestEmail: string
     quantity: number
     orderNumber: string | null
+    notes: string | null
     confirmedAt: Date
   }) {
     await this.bestEffortNotificationService.dispatch('purchase_notification', [
+      {
+        label: 'guest_purchase_confirmation',
+        execute: () => this.notificationService.sendGuestPurchaseConfirmation(payload),
+      },
       {
         label: 'admin_purchase_notification',
         execute: () => this.notificationService.sendAdminPurchaseNotification(payload),

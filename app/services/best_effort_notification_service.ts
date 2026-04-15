@@ -5,7 +5,13 @@ type BestEffortTask = {
 
 export class BestEffortNotificationService {
   async dispatch(context: string, tasks: BestEffortTask[]): Promise<void> {
-    const results = await Promise.allSettled(tasks.map((task) => task.execute()))
+    const results = await Promise.allSettled(
+      tasks.map((task) =>
+        Promise.resolve().then(async () => {
+          await task.execute()
+        })
+      )
+    )
 
     for (const [index, result] of results.entries()) {
       if (result.status === 'rejected') {

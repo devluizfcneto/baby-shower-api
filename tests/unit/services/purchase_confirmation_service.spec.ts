@@ -42,6 +42,7 @@ test.group('PurchaseConfirmationService', () => {
         }),
       } as any,
       {
+        sendGuestPurchaseConfirmation: async () => {},
         sendAdminPurchaseNotification: async () => {},
       } as any,
       new BestEffortNotificationService(),
@@ -220,6 +221,9 @@ test.group('PurchaseConfirmationService', () => {
         }),
       } as any,
       {
+        sendGuestPurchaseConfirmation: async () => {
+          throw new Error('smtp failed')
+        },
         sendAdminPurchaseNotification: async () => {
           throw new Error('smtp failed')
         },
