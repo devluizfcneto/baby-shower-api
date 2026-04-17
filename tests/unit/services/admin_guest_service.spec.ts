@@ -12,24 +12,33 @@ test.group('AdminGuestService', () => {
         findLatestEventId: async () => 10,
       } as any,
       {
-        findAdminGuestConfirmations: async () => [
+        findAdminConfirmedPeople: async () => [
           {
+            personId: 1,
             guestId: 1,
             fullName: 'Convidado 1',
             email: 'convidado1@example.com',
             confirmedAt: new Date('2026-06-10T10:00:00.000Z'),
-            companionsCount: 2,
+            personType: 'guest',
           },
           {
+            personId: 2,
+            guestId: 1,
+            fullName: 'Acompanhante 1',
+            email: 'acompanhante1@example.com',
+            confirmedAt: new Date('2026-06-10T10:00:00.000Z'),
+            personType: 'companion',
+          },
+          {
+            personId: 3,
             guestId: 2,
             fullName: 'Convidado 2',
             email: 'convidado2@example.com',
             confirmedAt: new Date('2026-06-11T10:00:00.000Z'),
-            companionsCount: 0,
+            personType: 'guest',
           },
         ],
-        countAdminGuestConfirmations: async () => 2,
-        findCompanionsByGuestIds: async () => [],
+        countAdminConfirmedPeople: async () => 3,
       } as any,
       new AdminQueryNormalizerService(),
       new InputSanitizerService()
@@ -37,55 +46,51 @@ test.group('AdminGuestService', () => {
 
     const response = await service.list({ page: 1, perPage: 20 })
 
-    assert.equal(response.data.length, 2)
-    assert.equal(response.data[0].totalPeople, 3)
+    assert.equal(response.data.length, 3)
+    assert.equal(response.data[0].personType, 'guest')
+    assert.equal(response.data[1].personType, 'companion')
+    assert.equal(response.data[1].guestId, 1)
     assert.equal(response.meta.summary.guests, 2)
-    assert.equal(response.meta.summary.companions, 2)
-    assert.equal(response.meta.summary.totalPeople, 4)
+    assert.equal(response.meta.summary.companions, 1)
+    assert.equal(response.meta.summary.totalPeople, 3)
     assert.equal(response.meta.totalPages, 1)
   })
 
-  test('includes companions only when expand is requested', async ({ assert }) => {
-    let companionsLookupCalls = 0
-
+  test('returns flattened confirmed people without needing expand', async ({ assert }) => {
     const service = new AdminGuestService(
       {
         findLatestEventId: async () => 10,
       } as any,
       {
-        findAdminGuestConfirmations: async () => [
+        findAdminConfirmedPeople: async () => [
           {
+            personId: 1,
             guestId: 1,
             fullName: 'Convidado 1',
             email: 'convidado1@example.com',
             confirmedAt: new Date('2026-06-10T10:00:00.000Z'),
-            companionsCount: 1,
+            personType: 'guest',
+          },
+          {
+            personId: 2,
+            guestId: 1,
+            fullName: 'Acompanhante 1',
+            email: 'acompanhante1@example.com',
+            confirmedAt: new Date('2026-06-10T10:00:00.000Z'),
+            personType: 'companion',
           },
         ],
-        countAdminGuestConfirmations: async () => 1,
-        findCompanionsByGuestIds: async () => {
-          companionsLookupCalls += 1
-          return [
-            {
-              id: 99,
-              guestId: 1,
-              fullName: 'Acompanhante 1',
-            },
-          ]
-        },
+        countAdminConfirmedPeople: async () => 2,
       } as any,
       new AdminQueryNormalizerService(),
       new InputSanitizerService()
     )
 
-    const withoutExpand = await service.list({})
-    assert.equal(companionsLookupCalls, 0)
-    assert.isUndefined(withoutExpand.data[0].companions)
+    const response = await service.list({})
 
-    const withExpand = await service.list({ expand: 'companions' })
-    assert.equal(companionsLookupCalls, 1)
-    assert.equal(withExpand.data[0].companions?.length, 1)
-    assert.equal(withExpand.data[0].companions?.[0].fullName, 'Acompanhante 1')
+    assert.equal(response.data.length, 2)
+    assert.equal(response.data[0].personType, 'guest')
+    assert.equal(response.data[1].personType, 'companion')
   })
 
   test('returns stable empty response when no event exists', async ({ assert }) => {

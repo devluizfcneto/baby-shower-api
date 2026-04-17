@@ -21,13 +21,14 @@ type EventConfigPayload = {
   date?: string
   venueAddress?: string
   deliveryAddress?: string
+  deliveryAddress2?: string
+  deliveryAddress3?: string
   mapsLink?: string
   coverImageUrl?: string
+  eventDetail?: string
   pix?: {
     dadKey?: string
     momKey?: string
-    dadQrCode?: string
-    momQrCode?: string
   }
 }
 
@@ -39,13 +40,14 @@ type EventConfigResponse = {
     date: string
     venueAddress: string
     deliveryAddress: string | null
+    deliveryAddress2: string | null
+    deliveryAddress3: string | null
     mapsLink: string | null
     coverImageUrl: string | null
+    eventDetail: string | null
     pix: {
       dadKey: string | null
       momKey: string | null
-      dadQrCode: string | null
-      momQrCode: string | null
     }
     updatedAt: string
   }
@@ -144,43 +146,53 @@ export class EventConfigService {
   }
 
   private normalizePatch(input: EventConfigPayload): UpdateEventConfigInput {
-    const date = this.parseDate(input.date)
+    const patch: UpdateEventConfigInput = {}
 
-    return {
-      name: input.name ? this.inputSanitizerService.normalizeRequiredText(input.name) : undefined,
-      date,
-      venueAddress: input.venueAddress
-        ? this.inputSanitizerService.normalizeRequiredText(input.venueAddress)
-        : undefined,
-      deliveryAddress:
-        input.deliveryAddress !== undefined
-          ? this.inputSanitizerService.normalizeOptionalText(input.deliveryAddress)
-          : undefined,
-      mapsLink:
-        input.mapsLink !== undefined
-          ? this.inputSanitizerService.normalizeOptionalText(input.mapsLink)
-          : undefined,
-      coverImageUrl:
-        input.coverImageUrl !== undefined
-          ? this.inputSanitizerService.normalizeOptionalText(input.coverImageUrl)
-          : undefined,
-      pixKeyDad:
-        input.pix?.dadKey !== undefined
-          ? this.inputSanitizerService.normalizeOptionalText(input.pix.dadKey)
-          : undefined,
-      pixKeyMom:
-        input.pix?.momKey !== undefined
-          ? this.inputSanitizerService.normalizeOptionalText(input.pix.momKey)
-          : undefined,
-      pixQrcodeDad:
-        input.pix?.dadQrCode !== undefined
-          ? this.inputSanitizerService.normalizeOptionalText(input.pix.dadQrCode)
-          : undefined,
-      pixQrcodeMom:
-        input.pix?.momQrCode !== undefined
-          ? this.inputSanitizerService.normalizeOptionalText(input.pix.momQrCode)
-          : undefined,
+    if (this.hasOwn(input, 'name') && input.name !== undefined) {
+      patch.name = this.inputSanitizerService.normalizeRequiredText(input.name)
     }
+
+    if (this.hasOwn(input, 'date') && input.date !== undefined) {
+      patch.date = this.parseDate(input.date)
+    }
+
+    if (this.hasOwn(input, 'venueAddress') && input.venueAddress !== undefined) {
+      patch.venueAddress = this.inputSanitizerService.normalizeRequiredText(input.venueAddress)
+    }
+
+    if (this.hasOwn(input, 'deliveryAddress')) {
+      patch.deliveryAddress = this.inputSanitizerService.normalizeOptionalText(input.deliveryAddress)
+    }
+
+    if (this.hasOwn(input, 'deliveryAddress2')) {
+      patch.deliveryAddress2 = this.inputSanitizerService.normalizeOptionalText(input.deliveryAddress2)
+    }
+
+    if (this.hasOwn(input, 'deliveryAddress3')) {
+      patch.deliveryAddress3 = this.inputSanitizerService.normalizeOptionalText(input.deliveryAddress3)
+    }
+
+    if (this.hasOwn(input, 'mapsLink')) {
+      patch.mapsLink = this.inputSanitizerService.normalizeOptionalText(input.mapsLink)
+    }
+
+    if (this.hasOwn(input, 'coverImageUrl')) {
+      patch.coverImageUrl = this.inputSanitizerService.normalizeOptionalText(input.coverImageUrl)
+    }
+
+    if (this.hasOwn(input, 'eventDetail')) {
+      patch.eventDetail = this.inputSanitizerService.normalizeOptionalText(input.eventDetail)
+    }
+
+    if (input.pix && this.hasOwn(input.pix, 'dadKey')) {
+      patch.pixKeyDad = this.inputSanitizerService.normalizeOptionalText(input.pix.dadKey)
+    }
+
+    if (input.pix && this.hasOwn(input.pix, 'momKey')) {
+      patch.pixKeyMom = this.inputSanitizerService.normalizeOptionalText(input.pix.momKey)
+    }
+
+    return patch
   }
 
   private parseDate(date?: string): Date | undefined {
@@ -213,12 +225,13 @@ export class EventConfigService {
       date: patch.date ?? current?.date ?? new Date(''),
       venueAddress: patch.venueAddress ?? current?.venueAddress ?? '',
       deliveryAddress: patch.deliveryAddress ?? current?.deliveryAddress ?? null,
+      deliveryAddress2: patch.deliveryAddress2 ?? current?.deliveryAddress2 ?? null,
+      deliveryAddress3: patch.deliveryAddress3 ?? current?.deliveryAddress3 ?? null,
       mapsLink: patch.mapsLink ?? current?.mapsLink ?? null,
       coverImageUrl: patch.coverImageUrl ?? current?.coverImageUrl ?? null,
+      eventDetail: patch.eventDetail ?? current?.eventDetail ?? null,
       pixKeyDad: patch.pixKeyDad ?? current?.pixKeyDad ?? null,
       pixKeyMom: patch.pixKeyMom ?? current?.pixKeyMom ?? null,
-      pixQrcodeDad: patch.pixQrcodeDad ?? current?.pixQrcodeDad ?? null,
-      pixQrcodeMom: patch.pixQrcodeMom ?? current?.pixQrcodeMom ?? null,
     }
   }
 
@@ -277,5 +290,9 @@ export class EventConfigService {
     }
 
     return false
+  }
+
+  private hasOwn(target: object, key: string): boolean {
+    return Object.prototype.hasOwnProperty.call(target, key)
   }
 }

@@ -30,8 +30,6 @@ test.group('POST /api/events/:eventCode/gifts/:giftId/confirm-purchase', (group)
       coverImageUrl: null,
       pixKeyDad: null,
       pixKeyMom: null,
-      pixQrcodeDad: null,
-      pixQrcodeMom: null,
     })
   }
 

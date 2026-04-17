@@ -10,13 +10,14 @@ type PublicEventResponse = {
     date: string
     venueAddress: string
     deliveryAddress: string | null
+    deliveryAddress2: string | null
+    deliveryAddress3: string | null
     mapsLink: string | null
     coverImageUrl: string | null
+    eventDetail: string | null
     pix: {
       dadKey: string | null
       momKey: string | null
-      dadQrCode: string | null
-      momQrCode: string | null
     }
   }
   meta: {

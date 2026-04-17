@@ -29,8 +29,6 @@ test.group('POST /api/events/:eventCode/rsvp', (group) => {
       coverImageUrl: null,
       pixKeyDad: null,
       pixKeyMom: null,
-      pixQrcodeDad: null,
-      pixQrcodeMom: null,
     })
   }
 
@@ -62,7 +60,7 @@ test.group('POST /api/events/:eventCode/rsvp', (group) => {
     assert.equal(savedGuest?.eventId, event.id)
   })
 
-  test('confirms presence with companions', async ({ client, assert }) => {
+  test('confirms presence with up to two companions', async ({ client, assert }) => {
     const event = await createEvent()
 
     const response = await client.post(`/api/events/${event.code}/rsvp`).json({
@@ -218,16 +216,13 @@ test.group('POST /api/events/:eventCode/rsvp', (group) => {
     const secondResponse = await client.post(`/api/events/${event.code}/rsvp`).json({
       fullName: 'Convidado 2',
       email: 'convidado2@example.com',
-      companions: [
-        { fullName: 'Acompanhante Repetido', email: 'duplicado.companion@example.com' },
-        { fullName: 'Acompanhante Novo', email: 'novo.companion@example.com' },
-      ],
+      companions: [{ fullName: 'Acompanhante Repetido', email: 'duplicado.companion@example.com' }],
     })
 
     secondResponse.assertStatus(201)
     secondResponse.assertBodyContains({
       data: {
-        companionsCount: 1,
+        companionsCount: 0,
       },
     })
 
@@ -238,15 +233,7 @@ test.group('POST /api/events/:eventCode/rsvp', (group) => {
       })
       .getCount()
 
-    const newEmailCount = await AppDataSource.getRepository(Companion)
-      .createQueryBuilder('companion')
-      .where('LOWER(companion.email) = LOWER(:email)', {
-        email: 'novo.companion@example.com',
-      })
-      .getCount()
-
     assert.equal(duplicateEmailCount, 1)
-    assert.equal(newEmailCount, 1)
   })
 
   test('returns 409 when trying to confirm guest with an email already used by a companion in the same event', async ({

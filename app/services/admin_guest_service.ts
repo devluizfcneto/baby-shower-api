@@ -3,8 +3,7 @@ import { inject } from '@adonisjs/core'
 import { AdminGuestListFetchFailedException } from '#exceptions/domain_exceptions'
 import {
   GuestRepository,
-  type AdminCompanionProjection,
-  type AdminGuestListProjection,
+  type AdminConfirmedPersonProjection,
   type AdminGuestSortBy,
   type AdminGuestSortDir,
 } from '#repositories/guest_repository'
@@ -20,20 +19,15 @@ type ListAdminGuestsInput = {
   confirmedTo?: string
   sortBy?: AdminGuestSortBy
   sortDir?: AdminGuestSortDir
-  expand?: 'companions'
 }
 
 type AdminGuestOutput = {
+  personId: number
   guestId: number
   fullName: string
-  email: string
+  email: string | null
   confirmedAt: string
-  companionsCount: number
-  totalPeople: number
-  companions?: Array<{
-    id: number
-    fullName: string
-  }>
+  personType: 'guest' | 'companion'
 }
 
 type ListAdminGuestsResponse = {
@@ -67,7 +61,6 @@ type NormalizedInput = {
   confirmedTo: Date | undefined
   sortBy: AdminGuestSortBy
   sortDir: AdminGuestSortDir
-  includeCompanions: boolean
 }
 
 @inject()
@@ -105,7 +98,7 @@ export class AdminGuestService {
 
     try {
       const [rows, total] = await Promise.all([
-        this.guestRepository.findAdminGuestConfirmations({
+        this.guestRepository.findAdminConfirmedPeople({
           eventId,
           page: normalizedInput.page,
           perPage: normalizedInput.perPage,
@@ -115,8 +108,10 @@ export class AdminGuestService {
           sortBy: normalizedInput.sortBy,
           sortDir: normalizedInput.sortDir,
         }),
-        this.guestRepository.countAdminGuestConfirmations({
+        this.guestRepository.countAdminConfirmedPeople({
           eventId,
+          page: normalizedInput.page,
+          perPage: normalizedInput.perPage,
           search: normalizedInput.search,
           confirmedFrom: normalizedInput.confirmedFrom,
           confirmedTo: normalizedInput.confirmedTo,
@@ -125,12 +120,9 @@ export class AdminGuestService {
         }),
       ])
 
-      const companionsMap = await this.resolveCompanionsMap(rows, normalizedInput.includeCompanions)
-      const data = rows.map((row) => this.mapGuestOutput(row, companionsMap))
-
-      const companionsTotal = data.reduce((sum, row) => sum + row.companionsCount, 0)
-      const guestsTotal = data.length
-      const totalPeople = guestsTotal + companionsTotal
+      const data = rows.map((row) => this.mapGuestOutput(row))
+      const guestsTotal = rows.filter((row) => row.personType === 'guest').length
+      const companionsTotal = rows.length - guestsTotal
 
       return {
         data,
@@ -152,7 +144,7 @@ export class AdminGuestService {
           summary: {
             guests: guestsTotal,
             companions: companionsTotal,
-            totalPeople,
+            totalPeople: data.length,
           },
           source: 'database',
         },
@@ -201,48 +193,17 @@ export class AdminGuestService {
       confirmedTo,
       sortBy: input.sortBy ?? AdminGuestService.DEFAULT_SORT_BY,
       sortDir: input.sortDir ?? AdminGuestService.DEFAULT_SORT_DIR,
-      includeCompanions: input.expand === 'companions',
     }
   }
 
-  private async resolveCompanionsMap(
-    rows: AdminGuestListProjection[],
-    includeCompanions: boolean
-  ): Promise<Map<number, AdminCompanionProjection[]>> {
-    if (!includeCompanions || rows.length === 0) {
-      return new Map()
-    }
-
-    const guestIds = rows.map((row) => row.guestId)
-    const companions = await this.guestRepository.findCompanionsByGuestIds(guestIds)
-    const map = new Map<number, AdminCompanionProjection[]>()
-
-    for (const companion of companions) {
-      const current = map.get(companion.guestId) ?? []
-      current.push(companion)
-      map.set(companion.guestId, current)
-    }
-
-    return map
-  }
-
-  private mapGuestOutput(
-    row: AdminGuestListProjection,
-    companionsMap: Map<number, AdminCompanionProjection[]>
-  ): AdminGuestOutput {
-    const companions = companionsMap.get(row.guestId)
-
+  private mapGuestOutput(row: AdminConfirmedPersonProjection): AdminGuestOutput {
     return {
+      personId: row.personId,
       guestId: row.guestId,
       fullName: row.fullName,
       email: row.email,
       confirmedAt: row.confirmedAt.toISOString(),
-      companionsCount: row.companionsCount,
-      totalPeople: row.companionsCount + 1,
-      companions: companions?.map((companion) => ({
-        id: companion.id,
-        fullName: companion.fullName,
-      })),
+      personType: row.personType,
     }
   }
 

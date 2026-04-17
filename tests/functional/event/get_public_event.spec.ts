@@ -26,8 +26,6 @@ test.group('GET /api/events/:eventCode', (group) => {
       coverImageUrl: 'https://cdn.example.com/capa.jpg',
       pixKeyDad: 'dad@example.com',
       pixKeyMom: 'mom@example.com',
-      pixQrcodeDad: null,
-      pixQrcodeMom: null,
     })
 
     const response = await client.get(`/api/events/${event.code}`)
@@ -64,8 +62,6 @@ test.group('GET /api/events/:eventCode', (group) => {
       coverImageUrl: null,
       pixKeyDad: null,
       pixKeyMom: null,
-      pixQrcodeDad: null,
-      pixQrcodeMom: null,
     })
 
     const originalMethod = EventRepository.prototype.findPublicEventByCode
@@ -108,8 +104,6 @@ test.group('GET /api/events/:eventCode', (group) => {
       coverImageUrl: null,
       pixKeyDad: null,
       pixKeyMom: null,
-      pixQrcodeDad: null,
-      pixQrcodeMom: null,
     })
 
     let queryCount = 0
@@ -154,8 +148,6 @@ test.group('GET /api/events/:eventCode', (group) => {
       coverImageUrl: null,
       pixKeyDad: null,
       pixKeyMom: null,
-      pixQrcodeDad: null,
-      pixQrcodeMom: null,
     })
 
     const durations: number[] = []

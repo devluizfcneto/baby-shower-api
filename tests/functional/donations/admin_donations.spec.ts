@@ -50,8 +50,6 @@ test.group('Admin Donations', (group) => {
       coverImageUrl: null,
       pixKeyDad: null,
       pixKeyMom: null,
-      pixQrcodeDad: null,
-      pixQrcodeMom: null,
     })
   }
 

@@ -44,23 +44,26 @@ export class Event {
   @Column({ name: 'delivery_address', type: 'text', nullable: true })
   declare deliveryAddress: string | null
 
+  @Column({ name: 'delivery_address_2', type: 'text', nullable: true })
+  declare deliveryAddress2: string | null
+
+  @Column({ name: 'delivery_address_3', type: 'text', nullable: true })
+  declare deliveryAddress3: string | null
+
   @Column({ name: 'maps_link', type: 'text', nullable: true })
   declare mapsLink: string | null
 
   @Column({ name: 'cover_image_url', type: 'text', nullable: true })
   declare coverImageUrl: string | null
 
+  @Column({ name: 'event_detail', type: 'text', nullable: true })
+  declare eventDetail: string | null
+
   @Column({ name: 'pix_key_dad', type: 'varchar', length: 200, nullable: true })
   declare pixKeyDad: string | null
 
   @Column({ name: 'pix_key_mom', type: 'varchar', length: 200, nullable: true })
   declare pixKeyMom: string | null
-
-  @Column({ name: 'pix_qrcode_dad', type: 'text', nullable: true })
-  declare pixQrcodeDad: string | null
-
-  @Column({ name: 'pix_qrcode_mom', type: 'text', nullable: true })
-  declare pixQrcodeMom: string | null
 
   @Column({ name: 'is_archived', type: 'boolean', default: false })
   declare isArchived: boolean

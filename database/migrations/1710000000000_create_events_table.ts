@@ -12,12 +12,13 @@ export class CreateEventsTable1710000000000 implements MigrationInterface {
         date TIMESTAMP NOT NULL,
         venue_address TEXT NOT NULL,
         delivery_address TEXT NULL,
+        delivery_address_2 TEXT NULL,
+        delivery_address_3 TEXT NULL,
         maps_link TEXT NULL,
         cover_image_url TEXT NULL,
+        event_detail TEXT NULL,
         pix_key_dad VARCHAR(200) NULL,
         pix_key_mom VARCHAR(200) NULL,
-        pix_qrcode_dad TEXT NULL,
-        pix_qrcode_mom TEXT NULL,
         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
       )

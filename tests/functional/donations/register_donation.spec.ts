@@ -28,8 +28,6 @@ test.group('POST /api/donations', (group) => {
       coverImageUrl: null,
       pixKeyDad: null,
       pixKeyMom: null,
-      pixQrcodeDad: null,
-      pixQrcodeMom: null,
     })
   }
 

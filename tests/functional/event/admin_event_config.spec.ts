@@ -54,8 +54,6 @@ test.group('Admin Event Config', (group) => {
       coverImageUrl: null,
       pixKeyDad: 'dad@example.com',
       pixKeyMom: null,
-      pixQrcodeDad: null,
-      pixQrcodeMom: null,
     })
 
     const accessToken = await login(client)
@@ -92,8 +90,6 @@ test.group('Admin Event Config', (group) => {
       coverImageUrl: null,
       pixKeyDad: null,
       pixKeyMom: null,
-      pixQrcodeDad: null,
-      pixQrcodeMom: null,
     })
 
     const accessToken = await login(client)
@@ -131,8 +127,6 @@ test.group('Admin Event Config', (group) => {
       coverImageUrl: null,
       pixKeyDad: null,
       pixKeyMom: null,
-      pixQrcodeDad: null,
-      pixQrcodeMom: null,
     })
 
     const accessToken = await login(client)

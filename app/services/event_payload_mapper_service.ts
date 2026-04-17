@@ -11,13 +11,14 @@ export class EventPayloadMapperService {
       date: event.date.toISOString(),
       venueAddress: event.venueAddress,
       deliveryAddress: event.deliveryAddress,
+      deliveryAddress2: event.deliveryAddress2,
+      deliveryAddress3: event.deliveryAddress3,
       mapsLink: event.mapsLink,
       coverImageUrl: event.coverImageUrl,
+      eventDetail: event.eventDetail,
       pix: {
         dadKey: event.pixKeyDad,
         momKey: event.pixKeyMom,
-        dadQrCode: event.pixQrcodeDad,
-        momQrCode: event.pixQrcodeMom,
       },
     }
   }
@@ -30,13 +31,14 @@ export class EventPayloadMapperService {
       date: event.date.toISOString(),
       venueAddress: event.venueAddress,
       deliveryAddress: event.deliveryAddress,
+      deliveryAddress2: event.deliveryAddress2,
+      deliveryAddress3: event.deliveryAddress3,
       mapsLink: event.mapsLink,
       coverImageUrl: event.coverImageUrl,
+      eventDetail: event.eventDetail,
       pix: {
         dadKey: event.pixKeyDad,
         momKey: event.pixKeyMom,
-        dadQrCode: event.pixQrcodeDad,
-        momQrCode: event.pixQrcodeMom,
       },
       updatedAt: event.updatedAt.toISOString(),
     }

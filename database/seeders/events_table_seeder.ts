@@ -33,23 +33,24 @@ export default class EventsTableSeeder implements Seeder {
       deliveryAddress: this.inputSanitizerService.normalizeOptionalText(
         process.env.SEED_EVENT_DELIVERY_ADDRESS ?? 'Rua das Flores, 100 - Centro'
       ),
+      deliveryAddress2: this.inputSanitizerService.normalizeOptionalText(
+        process.env.SEED_EVENT_DELIVERY_ADDRESS_2
+      ),
+      deliveryAddress3: this.inputSanitizerService.normalizeOptionalText(
+        process.env.SEED_EVENT_DELIVERY_ADDRESS_3
+      ),
       mapsLink: this.inputSanitizerService.normalizeOptionalText(
         process.env.SEED_EVENT_MAPS_LINK ?? 'https://maps.google.com/?q=Rua%20das%20Flores%2C%20100'
       ),
       coverImageUrl: this.inputSanitizerService.normalizeOptionalText(
         process.env.SEED_EVENT_COVER_URL
       ),
+      eventDetail: this.inputSanitizerService.normalizeOptionalText(process.env.SEED_EVENT_DETAIL),
       pixKeyDad: this.inputSanitizerService.normalizeOptionalText(
         process.env.SEED_EVENT_PIX_KEY_DAD
       ),
       pixKeyMom: this.inputSanitizerService.normalizeOptionalText(
         process.env.SEED_EVENT_PIX_KEY_MOM
-      ),
-      pixQrcodeDad: this.inputSanitizerService.normalizeOptionalText(
-        process.env.SEED_EVENT_PIX_QRCODE_DAD
-      ),
-      pixQrcodeMom: this.inputSanitizerService.normalizeOptionalText(
-        process.env.SEED_EVENT_PIX_QRCODE_MOM
       ),
       isArchived: String(process.env.SEED_EVENT_IS_ARCHIVED ?? 'false').toLowerCase() === 'true',
     })

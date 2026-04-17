@@ -11,12 +11,13 @@ export type EventPublicProjection = Pick<
   | 'date'
   | 'venueAddress'
   | 'deliveryAddress'
+  | 'deliveryAddress2'
+  | 'deliveryAddress3'
   | 'mapsLink'
   | 'coverImageUrl'
+  | 'eventDetail'
   | 'pixKeyDad'
   | 'pixKeyMom'
-  | 'pixQrcodeDad'
-  | 'pixQrcodeMom'
 >
 
 export type EventConfigProjection = Pick<
@@ -27,12 +28,13 @@ export type EventConfigProjection = Pick<
   | 'date'
   | 'venueAddress'
   | 'deliveryAddress'
+  | 'deliveryAddress2'
+  | 'deliveryAddress3'
   | 'mapsLink'
   | 'coverImageUrl'
+  | 'eventDetail'
   | 'pixKeyDad'
   | 'pixKeyMom'
-  | 'pixQrcodeDad'
-  | 'pixQrcodeMom'
   | 'adminId'
   | 'isArchived'
   | 'updatedAt'
@@ -75,12 +77,13 @@ export type CreateAdminEventInput = {
   date: Date
   venueAddress: string
   deliveryAddress: string | null
+  deliveryAddress2: string | null
+  deliveryAddress3: string | null
   mapsLink: string | null
   coverImageUrl: string | null
+  eventDetail: string | null
   pixKeyDad: string | null
   pixKeyMom: string | null
-  pixQrcodeDad: string | null
-  pixQrcodeMom: string | null
 }
 
 export type EventMailContextProjection = {
@@ -98,12 +101,13 @@ export type UpsertEventConfigInput = {
   date: Date
   venueAddress: string
   deliveryAddress: string | null
+  deliveryAddress2: string | null
+  deliveryAddress3: string | null
   mapsLink: string | null
   coverImageUrl: string | null
+  eventDetail: string | null
   pixKeyDad: string | null
   pixKeyMom: string | null
-  pixQrcodeDad: string | null
-  pixQrcodeMom: string | null
 }
 
 export type UpdateEventConfigInput = Partial<UpsertEventConfigInput>
@@ -123,12 +127,13 @@ export class EventRepository {
         'event.date',
         'event.venueAddress',
         'event.deliveryAddress',
+        'event.deliveryAddress2',
+        'event.deliveryAddress3',
         'event.mapsLink',
         'event.coverImageUrl',
+        'event.eventDetail',
         'event.pixKeyDad',
         'event.pixKeyMom',
-        'event.pixQrcodeDad',
-        'event.pixQrcodeMom',
       ])
       .where('event.code = :eventCode', { eventCode })
       .andWhere('event.isArchived = false')
@@ -212,12 +217,13 @@ export class EventRepository {
         date: input.date,
         venueAddress: input.venueAddress,
         deliveryAddress: input.deliveryAddress,
+        deliveryAddress2: input.deliveryAddress2,
+        deliveryAddress3: input.deliveryAddress3,
         mapsLink: input.mapsLink,
         coverImageUrl: input.coverImageUrl,
+        eventDetail: input.eventDetail,
         pixKeyDad: input.pixKeyDad,
         pixKeyMom: input.pixKeyMom,
-        pixQrcodeDad: input.pixQrcodeDad,
-        pixQrcodeMom: input.pixQrcodeMom,
         isArchived: false,
       })
       .returning([
@@ -228,12 +234,13 @@ export class EventRepository {
         'date',
         'venue_address',
         'delivery_address',
+        'delivery_address_2',
+        'delivery_address_3',
         'maps_link',
         'cover_image_url',
+        'event_detail',
         'pix_key_dad',
         'pix_key_mom',
-        'pix_qrcode_dad',
-        'pix_qrcode_mom',
         'is_archived',
         'updated_at',
       ])
@@ -259,12 +266,13 @@ export class EventRepository {
         'event.date AS date',
         'event.venue_address AS venue_address',
         'event.delivery_address AS delivery_address',
+        'event.delivery_address_2 AS delivery_address_2',
+        'event.delivery_address_3 AS delivery_address_3',
         'event.maps_link AS maps_link',
         'event.cover_image_url AS cover_image_url',
+        'event.event_detail AS event_detail',
         'event.pix_key_dad AS pix_key_dad',
         'event.pix_key_mom AS pix_key_mom',
-        'event.pix_qrcode_dad AS pix_qrcode_dad',
-        'event.pix_qrcode_mom AS pix_qrcode_mom',
         'event.is_archived AS is_archived',
         'event.created_at AS created_at',
         'event.updated_at AS updated_at',
@@ -283,12 +291,13 @@ export class EventRepository {
         date: string | Date
         venue_address: string
         delivery_address: string | null
+        delivery_address_2: string | null
+        delivery_address_3: string | null
         maps_link: string | null
         cover_image_url: string | null
+        event_detail: string | null
         pix_key_dad: string | null
         pix_key_mom: string | null
-        pix_qrcode_dad: string | null
-        pix_qrcode_mom: string | null
         is_archived: boolean
         created_at: string | Date
         updated_at: string | Date
@@ -317,15 +326,13 @@ export class EventRepository {
     adminId: number,
     input: UpdateEventConfigInput
   ): Promise<EventConfigProjection | null> {
-    const updatePayload = this.removeUndefinedFields({
-      ...input,
-      updatedAt: new Date(),
-    })
-
     const result = await this.repository
       .createQueryBuilder()
       .update(Event)
-      .set(updatePayload)
+      .set({
+        ...input,
+        updatedAt: new Date(),
+      })
       .where('code = :eventCode', { eventCode })
       .andWhere('admin_id = :adminId', { adminId })
       .returning([
@@ -336,12 +343,13 @@ export class EventRepository {
         'date',
         'venue_address',
         'delivery_address',
+        'delivery_address_2',
+        'delivery_address_3',
         'maps_link',
         'cover_image_url',
+        'event_detail',
         'pix_key_dad',
         'pix_key_mom',
-        'pix_qrcode_dad',
-        'pix_qrcode_mom',
         'is_archived',
         'updated_at',
       ])
@@ -373,12 +381,13 @@ export class EventRepository {
         'date',
         'venue_address',
         'delivery_address',
+        'delivery_address_2',
+        'delivery_address_3',
         'maps_link',
         'cover_image_url',
+        'event_detail',
         'pix_key_dad',
         'pix_key_mom',
-        'pix_qrcode_dad',
-        'pix_qrcode_mom',
         'is_archived',
         'updated_at',
       ])
@@ -517,13 +526,15 @@ export class EventRepository {
         'event.date',
         'event.venueAddress',
         'event.deliveryAddress',
+        'event.deliveryAddress2',
+        'event.deliveryAddress3',
         'event.mapsLink',
         'event.coverImageUrl',
+        'event.eventDetail',
         'event.pixKeyDad',
         'event.pixKeyMom',
-        'event.pixQrcodeDad',
-        'event.pixQrcodeMom',
         'event.adminId',
+        'event.isArchived',
         'event.updatedAt',
       ])
       .orderBy('event.id', 'DESC')
@@ -541,13 +552,15 @@ export class EventRepository {
         'event.date',
         'event.venueAddress',
         'event.deliveryAddress',
+        'event.deliveryAddress2',
+        'event.deliveryAddress3',
         'event.mapsLink',
         'event.coverImageUrl',
+        'event.eventDetail',
         'event.pixKeyDad',
         'event.pixKeyMom',
-        'event.pixQrcodeDad',
-        'event.pixQrcodeMom',
         'event.adminId',
+        'event.isArchived',
         'event.updatedAt',
       ])
       .where('event.id = :eventId', { eventId })
@@ -565,12 +578,13 @@ export class EventRepository {
         date: input.date,
         venueAddress: input.venueAddress,
         deliveryAddress: input.deliveryAddress,
+        deliveryAddress2: input.deliveryAddress2,
+        deliveryAddress3: input.deliveryAddress3,
         mapsLink: input.mapsLink,
         coverImageUrl: input.coverImageUrl,
+        eventDetail: input.eventDetail,
         pixKeyDad: input.pixKeyDad,
         pixKeyMom: input.pixKeyMom,
-        pixQrcodeDad: input.pixQrcodeDad,
-        pixQrcodeMom: input.pixQrcodeMom,
       })
       .returning([
         'id',
@@ -580,12 +594,14 @@ export class EventRepository {
         'date',
         'venue_address',
         'delivery_address',
+        'delivery_address_2',
+        'delivery_address_3',
         'maps_link',
         'cover_image_url',
+        'event_detail',
         'pix_key_dad',
         'pix_key_mom',
-        'pix_qrcode_dad',
-        'pix_qrcode_mom',
+        'is_archived',
         'updated_at',
       ])
       .execute()
@@ -599,12 +615,14 @@ export class EventRepository {
       date: string | Date
       venue_address: string
       delivery_address: string | null
+      delivery_address_2: string | null
+      delivery_address_3: string | null
       maps_link: string | null
       cover_image_url: string | null
+      event_detail: string | null
       pix_key_dad: string | null
       pix_key_mom: string | null
-      pix_qrcode_dad: string | null
-      pix_qrcode_mom: string | null
+      is_archived: boolean
       updated_at: string | Date
     }
 
@@ -612,15 +630,13 @@ export class EventRepository {
   }
 
   async updateConfigById(eventId: number, input: UpdateEventConfigInput): Promise<boolean> {
-    const updatePayload = this.removeUndefinedFields({
-      ...input,
-      updatedAt: new Date(),
-    })
-
     const result = await this.repository
       .createQueryBuilder()
       .update(Event)
-      .set(updatePayload)
+      .set({
+        ...input,
+        updatedAt: new Date(),
+      })
       .where('id = :eventId', { eventId })
       .execute()
 
@@ -629,10 +645,6 @@ export class EventRepository {
     }
 
     return result.affected > 0
-  }
-
-  private removeUndefinedFields<T extends Record<string, unknown>>(input: T): T {
-    return Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined)) as T
   }
 
   private mapRawProjection(raw: {
@@ -646,18 +658,20 @@ export class EventRepository {
     venueAddress?: string
     delivery_address?: string | null
     deliveryAddress?: string | null
+    delivery_address_2?: string | null
+    deliveryAddress2?: string | null
+    delivery_address_3?: string | null
+    deliveryAddress3?: string | null
     maps_link?: string | null
     mapsLink?: string | null
     cover_image_url?: string | null
     coverImageUrl?: string | null
+    event_detail?: string | null
+    eventDetail?: string | null
     pix_key_dad?: string | null
     pixKeyDad?: string | null
     pix_key_mom?: string | null
     pixKeyMom?: string | null
-    pix_qrcode_dad?: string | null
-    pixQrcodeDad?: string | null
-    pix_qrcode_mom?: string | null
-    pixQrcodeMom?: string | null
     updated_at?: string | Date
     updatedAt?: string | Date
     is_archived?: boolean
@@ -665,12 +679,13 @@ export class EventRepository {
   }): EventConfigProjection {
     const venueAddress = raw.venue_address ?? raw.venueAddress ?? ''
     const deliveryAddress = raw.delivery_address ?? raw.deliveryAddress ?? null
+    const deliveryAddress2 = raw.delivery_address_2 ?? raw.deliveryAddress2 ?? null
+    const deliveryAddress3 = raw.delivery_address_3 ?? raw.deliveryAddress3 ?? null
     const mapsLink = raw.maps_link ?? raw.mapsLink ?? null
     const coverImageUrl = raw.cover_image_url ?? raw.coverImageUrl ?? null
+    const eventDetail = raw.event_detail ?? raw.eventDetail ?? null
     const pixKeyDad = raw.pix_key_dad ?? raw.pixKeyDad ?? null
     const pixKeyMom = raw.pix_key_mom ?? raw.pixKeyMom ?? null
-    const pixQrcodeDad = raw.pix_qrcode_dad ?? raw.pixQrcodeDad ?? null
-    const pixQrcodeMom = raw.pix_qrcode_mom ?? raw.pixQrcodeMom ?? null
     const updatedAt = raw.updated_at ?? raw.updatedAt ?? new Date()
     const adminIdRaw = raw.admin_id ?? raw.adminId ?? null
     const isArchived = this.toBoolean(raw.is_archived ?? raw.isArchived ?? false)
@@ -683,12 +698,13 @@ export class EventRepository {
       date: new Date(raw.date),
       venueAddress,
       deliveryAddress,
+      deliveryAddress2,
+      deliveryAddress3,
       mapsLink,
       coverImageUrl,
+      eventDetail,
       pixKeyDad,
       pixKeyMom,
-      pixQrcodeDad,
-      pixQrcodeMom,
       isArchived,
       updatedAt: new Date(updatedAt),
     }

@@ -51,8 +51,6 @@ test.group('Admin Gift Management', (group) => {
       coverImageUrl: null,
       pixKeyDad: null,
       pixKeyMom: null,
-      pixQrcodeDad: null,
-      pixQrcodeMom: null,
     })
   }
 

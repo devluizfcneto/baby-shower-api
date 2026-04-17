@@ -40,8 +40,9 @@ test.group('Admin Guest Confirmations', (group) => {
     return response.body().accessToken as string
   }
 
-  async function createEvent(code = 'babyshower2026event1') {
+  async function createEvent(adminId: number, code = 'babyshower2026event1') {
     return AppDataSource.getRepository(Event).save({
+      adminId,
       code,
       name: 'Cha da Helena',
       date: new Date('2026-06-18T15:00:00.000Z'),
@@ -51,8 +52,6 @@ test.group('Admin Guest Confirmations', (group) => {
       coverImageUrl: null,
       pixKeyDad: null,
       pixKeyMom: null,
-      pixQrcodeDad: null,
-      pixQrcodeMom: null,
     })
   }
 
@@ -80,14 +79,14 @@ test.group('Admin Guest Confirmations', (group) => {
     })
   }
 
-  test('GET /api/admin/guests returns 401 without authentication', async ({ client }) => {
-    const response = await client.get('/api/admin/guests')
+  test('GET /api/admin/events/:eventId/guests returns 401 without authentication', async ({ client }) => {
+    const response = await client.get('/api/admin/events/1/guests')
     response.assertStatus(401)
   })
 
-  test('GET /api/admin/guests returns paginated list with summary', async ({ client, assert }) => {
-    await createAdmin()
-    const event = await createEvent()
+  test('GET /api/admin/events/:eventId/guests returns flattened confirmed people list', async ({ client, assert }) => {
+    const admin = await createAdmin()
+    const event = await createEvent(admin.id)
 
     const guest1 = await createGuest(event.id, {
       fullName: 'Ana Clara',
@@ -108,24 +107,28 @@ test.group('Admin Guest Confirmations', (group) => {
     const accessToken = await login(client)
 
     const response = await client
-      .get('/api/admin/guests?page=1&perPage=20&sortBy=confirmedAt&sortDir=asc')
+      .get(`/api/admin/events/${event.id}/guests?page=1&perPage=20&sortBy=confirmedAt&sortDir=asc`)
       .header('authorization', `Bearer ${accessToken}`)
 
     response.assertStatus(200)
 
     const body = response.body()
-    assert.equal(body.meta.total, 2)
+    assert.equal(body.meta.total, 3)
     assert.equal(body.meta.summary.guests, 2)
     assert.equal(body.meta.summary.companions, 1)
     assert.equal(body.meta.summary.totalPeople, 3)
+    assert.equal(body.data.length, 3)
+    assert.equal(body.data[0].personType, 'guest')
     assert.equal(body.data[0].fullName, 'Ana Clara')
-    assert.equal(body.data[0].companionsCount, 1)
-    assert.equal(body.data[0].totalPeople, 2)
+    assert.equal(body.data[1].personType, 'companion')
+    assert.equal(body.data[1].fullName, 'Acompanhante Ana')
+    assert.equal(body.data[2].personType, 'guest')
+    assert.equal(body.data[2].fullName, 'Bruno Lima')
   })
 
-  test('GET /api/admin/guests applies search filter', async ({ client, assert }) => {
-    await createAdmin()
-    const event = await createEvent()
+  test('GET /api/admin/events/:eventId/guests applies search filter', async ({ client, assert }) => {
+    const admin = await createAdmin()
+    const event = await createEvent(admin.id)
 
     await createGuest(event.id, {
       fullName: 'Joao Pedro',
@@ -140,7 +143,7 @@ test.group('Admin Guest Confirmations', (group) => {
     const accessToken = await login(client)
 
     const response = await client
-      .get('/api/admin/guests?search=joao')
+      .get(`/api/admin/events/${event.id}/guests?search=joao`)
       .header('authorization', `Bearer ${accessToken}`)
 
     response.assertStatus(200)
@@ -148,12 +151,12 @@ test.group('Admin Guest Confirmations', (group) => {
     assert.equal(response.body().data[0].fullName, 'Joao Pedro')
   })
 
-  test('GET /api/admin/guests includes companions with expand=companions', async ({
+  test('GET /api/admin/events/:eventId/guests returns companion as a separate confirmed person', async ({
     client,
     assert,
   }) => {
-    await createAdmin()
-    const event = await createEvent()
+    const admin = await createAdmin()
+    const event = await createEvent(admin.id)
 
     const guest = await createGuest(event.id, {
       fullName: 'Convidado Expand',
@@ -164,29 +167,27 @@ test.group('Admin Guest Confirmations', (group) => {
       fullName: 'Acompanhante 1',
       email: 'expand-c1@example.com',
     })
-    await createCompanion(event.id, guest.id, {
-      fullName: 'Acompanhante 2',
-      email: 'expand-c2@example.com',
-    })
 
     const accessToken = await login(client)
 
     const response = await client
-      .get('/api/admin/guests?expand=companions')
+      .get(`/api/admin/events/${event.id}/guests`)
       .header('authorization', `Bearer ${accessToken}`)
 
     response.assertStatus(200)
-    assert.equal(response.body().data[0].companions.length, 2)
+    assert.equal(response.body().data.length, 2)
+    assert.equal(response.body().data[0].personType, 'guest')
+    assert.equal(response.body().data[1].personType, 'companion')
   })
 
-  test('GET /api/admin/guests returns 422 for invalid filter range', async ({ client }) => {
-    await createAdmin()
-    await createEvent()
+  test('GET /api/admin/events/:eventId/guests returns 422 for invalid filter range', async ({ client }) => {
+    const admin = await createAdmin()
+    const event = await createEvent(admin.id)
     const accessToken = await login(client)
 
     const response = await client
       .get(
-        '/api/admin/guests?confirmedFrom=2026-06-30T23:59:59.999Z&confirmedTo=2026-06-01T00:00:00.000Z'
+        `/api/admin/events/${event.id}/guests?confirmedFrom=2026-06-30T23:59:59.999Z&confirmedTo=2026-06-01T00:00:00.000Z`
       )
       .header('authorization', `Bearer ${accessToken}`)
 
@@ -200,12 +201,12 @@ test.group('Admin Guest Confirmations', (group) => {
     })
   })
 
-  test('GET /api/admin/guests executes predictable query count and avoids N+1', async ({
+  test('GET /api/admin/events/:eventId/guests executes predictable query count and avoids N+1', async ({
     client,
     assert,
   }) => {
-    await createAdmin()
-    const event = await createEvent()
+    const admin = await createAdmin()
+    const event = await createEvent(admin.id)
 
     const guest1 = await createGuest(event.id, { email: 'n1-a@example.com' })
     await createCompanion(event.id, guest1.id, { email: 'n1-a-c1@example.com' })
@@ -242,7 +243,7 @@ test.group('Admin Guest Confirmations', (group) => {
 
     try {
       const response = await client
-        .get('/api/admin/guests?expand=companions')
+        .get(`/api/admin/events/${event.id}/guests?expand=companions`)
         .header('authorization', `Bearer ${accessToken}`)
 
       response.assertStatus(200)

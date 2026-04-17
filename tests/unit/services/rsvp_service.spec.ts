@@ -35,7 +35,6 @@ test.group('RsvpService', () => {
           createManyCallCount += 1
           assert.deepEqual(companions, [
             { fullName: 'Acompanhante 1', email: 'acompanhante1@example.com' },
-            { fullName: 'Acompanhante 2', email: 'acompanhante2@example.com' },
           ])
 
           return companions
@@ -63,7 +62,6 @@ test.group('RsvpService', () => {
         email: 'convidado@example.com',
         companions: [
           { fullName: 'Acompanhante 1', email: 'acompanhante1@example.com' },
-          { fullName: 'Acompanhante 2', email: 'acompanhante2@example.com' },
         ],
       })
 
@@ -73,7 +71,7 @@ test.group('RsvpService', () => {
           guestId: 99,
           fullName: 'Convidado Exemplo',
           email: 'convidado@example.com',
-          companionsCount: 2,
+          companionsCount: 1,
           confirmedAt: '2026-04-04T12:00:00.000Z',
         },
         meta: {
@@ -195,7 +193,7 @@ test.group('RsvpService', () => {
     }
   })
 
-  test('limits companions to max 2 in service layer', async ({ assert }) => {
+  test('limits companions to max 1 in service layer', async ({ assert }) => {
     const service = new RsvpService(
       { findMailContextByCode: async () => ({ id: 10, name: 'Evento', adminEmail: null }) } as any,
       { existsByEventAndEmail: async () => false } as any,
@@ -212,7 +210,6 @@ test.group('RsvpService', () => {
         companions: [
           { fullName: 'Comp 1', email: 'comp1@example.com' },
           { fullName: 'Comp 2', email: 'comp2@example.com' },
-          { fullName: 'Comp 3', email: 'comp3@example.com' },
         ],
       })
       assert.fail('Expected validation error for max companions')
@@ -236,9 +233,7 @@ test.group('RsvpService', () => {
         }),
       } as any,
       {
-        createManyByGuestId: async () => [
-          { fullName: 'Acompanhante 2', email: 'comp2@example.com' },
-        ],
+        createManyByGuestId: async () => [{ fullName: 'Acompanhante 1', email: 'comp1@example.com' }],
       } as any,
       {
         sendGuestConfirmation: async () => {},
@@ -262,11 +257,10 @@ test.group('RsvpService', () => {
         email: 'convidado@example.com',
         companions: [
           { fullName: 'Acompanhante 1', email: 'comp1@example.com' },
-          { fullName: 'Acompanhante 2', email: 'comp2@example.com' },
         ],
       })
 
-      assert.deepEqual(sentCompanions, ['comp2@example.com'])
+      assert.deepEqual(sentCompanions, ['comp1@example.com'])
       assert.equal(response.data.companionsCount, 1)
     } finally {
       ;(AppDataSource as any).transaction = originalTransaction

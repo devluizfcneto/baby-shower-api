@@ -61,7 +61,7 @@ export class RsvpService {
         {
           code: ErrorCode.UNPROCESSABLE_ENTITY,
           field: 'companions',
-          message: `A maximum of ${RsvpService.MAX_COMPANIONS_PER_GUEST} companions is allowed`,
+          message: 'A maximum of 2 companions is allowed',
         },
       ])
     }

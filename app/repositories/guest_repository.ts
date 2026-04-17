@@ -36,6 +36,18 @@ export type AdminGuestListProjection = {
   email: string
   confirmedAt: Date
   companionsCount: number
+  companionName: string | null
+}
+
+export type AdminConfirmedPersonType = 'guest' | 'companion'
+
+export type AdminConfirmedPersonProjection = {
+  personId: number
+  guestId: number
+  fullName: string
+  email: string | null
+  confirmedAt: Date
+  personType: AdminConfirmedPersonType
 }
 
 export type AdminCompanionProjection = {
@@ -142,6 +154,7 @@ export class GuestRepository {
         'guest.email AS email',
         'guest.confirmed_at AS confirmed_at',
         'COALESCE(COUNT(companion.id), 0) AS companions_count',
+        'MIN(companion.full_name) AS companion_name',
       ])
       .where('guest.event_id = :eventId', { eventId })
 
@@ -161,6 +174,7 @@ export class GuestRepository {
       email: string
       confirmed_at: Date | string
       companions_count: number | string
+      companion_name: string | null
     }>()
 
     return rows.map((row) => ({
@@ -169,6 +183,7 @@ export class GuestRepository {
       email: row.email,
       confirmedAt: new Date(row.confirmed_at),
       companionsCount: Number(row.companions_count),
+      companionName: row.companion_name,
     }))
   }
 
@@ -204,6 +219,37 @@ export class GuestRepository {
       guestId: Number(row.guest_id),
       fullName: row.full_name,
     }))
+  }
+
+  async findAdminConfirmedPeople(
+    filters: AdminGuestListFilters
+  ): Promise<AdminConfirmedPersonProjection[]> {
+    const query = this.buildAdminConfirmedPeopleQuery(filters, false)
+    const rows = await this.repository.query(query.sql, query.params)
+
+    return (
+      rows as Array<{
+        person_id: number | string
+        guest_id: number | string
+        full_name: string
+        email: string | null
+        confirmed_at: Date | string
+        person_type: AdminConfirmedPersonType
+      }>
+    ).map((row) => ({
+      personId: Number(row.person_id),
+      guestId: Number(row.guest_id),
+      fullName: row.full_name,
+      email: row.email,
+      confirmedAt: new Date(row.confirmed_at),
+      personType: row.person_type,
+    }))
+  }
+
+  async countAdminConfirmedPeople(filters: AdminGuestListFilters): Promise<number> {
+    const query = this.buildAdminConfirmedPeopleQuery(filters, true)
+    const rows = await this.repository.query(query.sql, query.params)
+    return Number(rows[0]?.total ?? 0)
   }
 
   async findAdminGuestsForExport(
@@ -282,8 +328,8 @@ export class GuestRepository {
 
   private applyAdminSorting(
     query: ReturnType<Repository<Guest>['createQueryBuilder']>,
-    sortBy: AdminGuestSortBy,
-    sortDir: AdminGuestSortDir
+    sortBy: AdminGuestSortBy = 'confirmedAt',
+    sortDir: AdminGuestSortDir = 'desc'
   ) {
     const columnBySort: Record<AdminGuestSortBy, string> = {
       confirmedAt: 'guest.confirmed_at',
@@ -293,5 +339,102 @@ export class GuestRepository {
 
     query.orderBy(columnBySort[sortBy], sortDir.toUpperCase() as 'ASC' | 'DESC')
     query.addOrderBy('guest.id', 'ASC')
+  }
+
+  private buildAdminConfirmedPeopleQuery(
+    filters: AdminGuestListFilters,
+    countOnly: boolean
+  ): { sql: string; params: Array<string | number | Date> } {
+    const params: Array<string | number | Date> = []
+    const addParam = (value: string | number | Date) => {
+      params.push(value)
+      return `$${params.length}`
+    }
+
+    const eventIdParam = addParam(filters.eventId)
+
+    const baseSql = `
+      SELECT
+        guest.id AS person_id,
+        guest.id AS guest_id,
+        guest.full_name AS full_name,
+        guest.email AS email,
+        guest.confirmed_at AS confirmed_at,
+        'guest' AS person_type
+      FROM guests guest
+      WHERE guest.event_id = ${eventIdParam}
+
+      UNION ALL
+
+      SELECT
+        companion.id AS person_id,
+        companion.guest_id AS guest_id,
+        companion.full_name AS full_name,
+        companion.email AS email,
+        guest.confirmed_at AS confirmed_at,
+        'companion' AS person_type
+      FROM companions companion
+      INNER JOIN guests guest ON guest.id = companion.guest_id
+      WHERE guest.event_id = ${eventIdParam}
+    `
+
+    const conditions: string[] = []
+
+    if (filters.search) {
+      const searchParam = addParam(`%${filters.search.toLowerCase()}%`)
+      conditions.push(
+        `(LOWER(full_name) LIKE ${searchParam} OR LOWER(COALESCE(email, '')) LIKE ${searchParam})`
+      )
+    }
+
+    if (filters.confirmedFrom) {
+      const confirmedFromParam = addParam(filters.confirmedFrom)
+      conditions.push(`confirmed_at >= ${confirmedFromParam}`)
+    }
+
+    if (filters.confirmedTo) {
+      const confirmedToParam = addParam(filters.confirmedTo)
+      conditions.push(`confirmed_at <= ${confirmedToParam}`)
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+
+    if (countOnly) {
+      return {
+        sql: `
+          SELECT COUNT(*)::int AS total
+          FROM (
+            ${baseSql}
+          ) AS confirmed_people
+          ${whereClause}
+        `,
+        params,
+      }
+    }
+
+    const sortByColumn: Record<AdminGuestSortBy, string> = {
+      confirmedAt: 'confirmed_at',
+      fullName: 'full_name',
+      email: 'email',
+    }
+
+    const orderBy = sortByColumn[filters.sortBy]
+    const sortDir = filters.sortDir.toUpperCase() as 'ASC' | 'DESC'
+    const limitParam = addParam(filters.perPage)
+    const offsetParam = addParam((filters.page - 1) * filters.perPage)
+
+    return {
+      sql: `
+        SELECT *
+        FROM (
+          ${baseSql}
+        ) AS confirmed_people
+        ${whereClause}
+        ORDER BY ${orderBy} ${sortDir}, guest_id ASC, CASE WHEN person_type = 'guest' THEN 0 ELSE 1 END ASC, person_id ASC
+        LIMIT ${limitParam}
+        OFFSET ${offsetParam}
+      `,
+      params,
+    }
   }
 }

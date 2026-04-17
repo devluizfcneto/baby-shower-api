@@ -21,7 +21,6 @@ export default class AdminGuestController {
       confirmedTo: query.confirmedTo,
       sortBy: query.sortBy,
       sortDir: query.sortDir,
-      expand: query.expand,
     })
 
     return response.ok(payload)

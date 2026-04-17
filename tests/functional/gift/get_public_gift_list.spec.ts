@@ -29,8 +29,6 @@ test.group('GET /api/gifts/:eventCode', (group) => {
       coverImageUrl: null,
       pixKeyDad: null,
       pixKeyMom: null,
-      pixQrcodeDad: null,
-      pixQrcodeMom: null,
     })
   }
 
