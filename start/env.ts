@@ -16,6 +16,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   PORT: Env.schema.number(),
   APP_KEY: Env.schema.string(),
   APP_URL: Env.schema.string({ format: 'url', tld: false }),
+  CORS_ALLOWED_ORIGINS: Env.schema.string.optional(),
   HOST: Env.schema.string({ format: 'host' }),
   LOG_LEVEL: Env.schema.string(),
   MAIL_MAILER: Env.schema.enum(['smtp', 'resend'] as const),
