@@ -5,7 +5,7 @@ import { Gift } from '#entities/gift'
 import { GiftRepository } from '#repositories/gift_repository'
 import { AppDataSource } from '#services/database_service'
 
-test.group('GET /api/gifts/:eventCode', (group) => {
+test.group('GET /api/events/:eventCode/gifts', (group) => {
   group.setup(async () => {
     if (!AppDataSource.isInitialized) {
       await AppDataSource.initialize()
@@ -86,7 +86,7 @@ test.group('GET /api/gifts/:eventCode', (group) => {
       },
     ])
 
-    const response = await client.get(`/api/gifts/${event.code}`)
+    const response = await client.get(`/api/events/${event.code}/gifts`)
 
     response.assertStatus(200)
     const body = response.body()
@@ -109,7 +109,7 @@ test.group('GET /api/gifts/:eventCode', (group) => {
   }) => {
     const event = await createEvent('giftsempty1234')
 
-    const response = await client.get(`/api/gifts/${event.code}`)
+    const response = await client.get(`/api/events/${event.code}/gifts`)
 
     response.assertStatus(200)
     response.assertBodyContains({
@@ -124,7 +124,7 @@ test.group('GET /api/gifts/:eventCode', (group) => {
   })
 
   test('returns 404 with EVENT_NOT_FOUND when event does not exist', async ({ client }) => {
-    const response = await client.get('/api/gifts/missingeventcode')
+    const response = await client.get('/api/events/missingeventcode/gifts')
 
     response.assertStatus(404)
     response.assertBodyContains({
@@ -136,20 +136,22 @@ test.group('GET /api/gifts/:eventCode', (group) => {
     })
   })
 
-  test('returns 422 when eventCode path param is invalid', async ({ client }) => {
-    const response = await client.get('/api/gifts/abc')
+  test('returns 404 when eventCode path param is invalid', async ({ client }) => {
+    const response = await client.get('/api/events/abc/gifts')
 
-    response.assertStatus(422)
+    response.assertStatus(404)
   })
 
   test('returns 500 with GIFT_LIST_FETCH_FAILED when repository fails', async ({ client }) => {
+    await createEvent('babyshower2026event1')
+
     const originalMethod = GiftRepository.prototype.findPublicByEventCode
     GiftRepository.prototype.findPublicByEventCode = async () => {
       throw new Error('forced failure')
     }
 
     try {
-      const response = await client.get('/api/gifts/babyshower2026event1')
+      const response = await client.get('/api/events/babyshower2026event1/gifts')
       response.assertStatus(500)
       response.assertBodyContains({
         errors: [
@@ -163,7 +165,7 @@ test.group('GET /api/gifts/:eventCode', (group) => {
     }
   })
 
-  test('executes only one SQL query per request in nominal path', async ({ client, assert }) => {
+  test('executes two SQL queries per request in nominal path', async ({ client, assert }) => {
     const event = await createEvent('giftsquerycount123')
 
     await AppDataSource.getRepository(Gift).insert({
@@ -206,11 +208,177 @@ test.group('GET /api/gifts/:eventCode', (group) => {
     }
 
     try {
-      const response = await client.get(`/api/gifts/${event.code}`)
+      const response = await client.get(`/api/events/${event.code}/gifts`)
       response.assertStatus(200)
-      assert.equal(queryCount, 1)
+      assert.equal(queryCount, 2)
     } finally {
       ;(AppDataSource as any).createQueryRunner = originalCreateQueryRunner
     }
+  })
+
+  test('prioritizes non-blocked gifts even when blocked has lower sortOrder', async ({
+    client,
+    assert,
+  }) => {
+    const event = await createEvent('giftspriority123')
+
+    await AppDataSource.getRepository(Gift).insert([
+      {
+        eventId: event.id,
+        name: 'Bloqueado Primeiro',
+        description: 'Deve ficar depois dos ativos',
+        imageUrl: null,
+        marketplaceUrl: 'https://example.com/blocked-first',
+        marketplace: 'amazon',
+        asin: null,
+        affiliateLinkAmazon: null,
+        affiliateLinkMl: null,
+        affiliateLinkShopee: null,
+        maxQuantity: 1,
+        confirmedQuantity: 0,
+        isBlocked: true,
+        sortOrder: 0,
+      },
+      {
+        eventId: event.id,
+        name: 'Disponivel Depois',
+        description: 'Mesmo com sort maior precisa vir antes',
+        imageUrl: null,
+        marketplaceUrl: 'https://example.com/available-after',
+        marketplace: 'mercadolivre',
+        asin: null,
+        affiliateLinkAmazon: null,
+        affiliateLinkMl: null,
+        affiliateLinkShopee: null,
+        maxQuantity: 1,
+        confirmedQuantity: 0,
+        isBlocked: false,
+        sortOrder: 10,
+      },
+    ])
+
+    const response = await client.get(`/api/events/${event.code}/gifts`)
+
+    response.assertStatus(200)
+    assert.equal(response.body().data[0].name, 'Disponivel Depois')
+    assert.equal(response.body().data[1].name, 'Bloqueado Primeiro')
+  })
+
+  test('filters by search across name, description and marketplace', async ({ client, assert }) => {
+    const event = await createEvent('giftsfiltersearch')
+
+    await AppDataSource.getRepository(Gift).insert([
+      {
+        eventId: event.id,
+        name: 'Kit Higiene Premium',
+        description: 'Com shampoo e sabonete',
+        imageUrl: null,
+        marketplaceUrl: 'https://example.com/higiene',
+        marketplace: 'amazon',
+        asin: null,
+        affiliateLinkAmazon: null,
+        affiliateLinkMl: null,
+        affiliateLinkShopee: null,
+        maxQuantity: 2,
+        confirmedQuantity: 0,
+        isBlocked: false,
+        sortOrder: 1,
+      },
+      {
+        eventId: event.id,
+        name: 'Fralda RN',
+        description: 'Pacote economico',
+        imageUrl: null,
+        marketplaceUrl: 'https://example.com/fralda',
+        marketplace: 'shopee',
+        asin: null,
+        affiliateLinkAmazon: null,
+        affiliateLinkMl: null,
+        affiliateLinkShopee: null,
+        maxQuantity: 3,
+        confirmedQuantity: 0,
+        isBlocked: false,
+        sortOrder: 2,
+      },
+    ])
+
+    const byName = await client.get(`/api/events/${event.code}/gifts?search=higiene`)
+    byName.assertStatus(200)
+    assert.equal(byName.body().meta.total, 1)
+    assert.equal(byName.body().data[0].name, 'Kit Higiene Premium')
+
+    const byDescription = await client.get(`/api/events/${event.code}/gifts?search=economico`)
+    byDescription.assertStatus(200)
+    assert.equal(byDescription.body().meta.total, 1)
+    assert.equal(byDescription.body().data[0].name, 'Fralda RN')
+
+    const byMarketplace = await client.get(`/api/events/${event.code}/gifts?search=shopee`)
+    byMarketplace.assertStatus(200)
+    assert.equal(byMarketplace.body().meta.total, 1)
+    assert.equal(byMarketplace.body().data[0].marketplace, 'shopee')
+  })
+
+  test('filters by marketplace and supports secondary ordering', async ({ client, assert }) => {
+    const event = await createEvent('giftsfiltermarket')
+
+    await AppDataSource.getRepository(Gift).insert([
+      {
+        eventId: event.id,
+        name: 'Produto B',
+        description: null,
+        imageUrl: null,
+        marketplaceUrl: 'https://example.com/produto-b',
+        marketplace: 'amazon',
+        asin: null,
+        affiliateLinkAmazon: null,
+        affiliateLinkMl: null,
+        affiliateLinkShopee: null,
+        maxQuantity: 1,
+        confirmedQuantity: 0,
+        isBlocked: false,
+        sortOrder: 1,
+      },
+      {
+        eventId: event.id,
+        name: 'Produto A',
+        description: null,
+        imageUrl: null,
+        marketplaceUrl: 'https://example.com/produto-a',
+        marketplace: 'amazon',
+        asin: null,
+        affiliateLinkAmazon: null,
+        affiliateLinkMl: null,
+        affiliateLinkShopee: null,
+        maxQuantity: 1,
+        confirmedQuantity: 0,
+        isBlocked: false,
+        sortOrder: 2,
+      },
+      {
+        eventId: event.id,
+        name: 'Produto ML',
+        description: null,
+        imageUrl: null,
+        marketplaceUrl: 'https://example.com/produto-ml',
+        marketplace: 'mercadolivre',
+        asin: null,
+        affiliateLinkAmazon: null,
+        affiliateLinkMl: null,
+        affiliateLinkShopee: null,
+        maxQuantity: 1,
+        confirmedQuantity: 0,
+        isBlocked: false,
+        sortOrder: 3,
+      },
+    ])
+
+    const response = await client.get(
+      `/api/events/${event.code}/gifts?marketplace=amazon&sortBy=name&sortDir=asc`
+    )
+
+    response.assertStatus(200)
+    assert.equal(response.body().meta.total, 2)
+    assert.equal(response.body().data[0].name, 'Produto A')
+    assert.equal(response.body().data[1].name, 'Produto B')
   })
 })

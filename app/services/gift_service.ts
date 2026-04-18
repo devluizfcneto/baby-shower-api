@@ -3,6 +3,8 @@ import { GiftRepository } from '#repositories/gift_repository'
 import { GiftPayloadMapperService } from '#services/gift_payload_mapper_service'
 import { inject } from '@adonisjs/core'
 
+type GiftPublicListFilters = Parameters<GiftRepository['findPublicByEventCode']>[1]
+
 type GiftPublicStatus = 'available' | 'limit_reached' | 'blocked'
 
 type PublicGiftListResponse = {
@@ -34,11 +36,14 @@ export class GiftService {
     private readonly giftPayloadMapperService: GiftPayloadMapperService
   ) {}
 
-  async listPublicGifts(eventCode: string): Promise<PublicGiftListResponse> {
+  async listPublicGifts(
+    eventCode: string,
+    filters: GiftPublicListFilters = {}
+  ): Promise<PublicGiftListResponse> {
     let result: Awaited<ReturnType<GiftRepository['findPublicByEventCode']>>
 
     try {
-      result = await this.giftRepository.findPublicByEventCode(eventCode)
+      result = await this.giftRepository.findPublicByEventCode(eventCode, filters)
     } catch {
       throw new GiftListFetchFailedException()
     }

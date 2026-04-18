@@ -123,4 +123,36 @@ test.group('GiftService', () => {
       )
     }
   })
+
+  test('forwards list filters to repository', async ({ assert }) => {
+    const captured: Array<unknown> = []
+    const service = new GiftService(
+      {
+        findPublicByEventCode: async (...args: unknown[]) => {
+          captured.push(...args)
+
+          return {
+            eventFound: true,
+            gifts: [],
+          }
+        },
+      } as any,
+      new GiftPayloadMapperService()
+    )
+
+    await service.listPublicGifts('babyshower2026event1', {
+      search: 'fralda',
+      marketplace: 'amazon',
+      sortBy: 'name',
+      sortDir: 'asc',
+    })
+
+    assert.equal(captured[0], 'babyshower2026event1')
+    assert.deepEqual(captured[1], {
+      search: 'fralda',
+      marketplace: 'amazon',
+      sortBy: 'name',
+      sortDir: 'asc',
+    })
+  })
 })

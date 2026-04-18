@@ -47,6 +47,19 @@ export type GiftListByEventResult = {
   gifts: GiftPublicProjection[]
 }
 
+export type GiftPublicListFilters = {
+  search?: string
+  marketplace?: 'amazon' | 'mercadolivre' | 'shopee'
+  sortBy?:
+    | 'sortOrder'
+    | 'name'
+    | 'description'
+    | 'marketplace'
+    | 'maxQuantity'
+    | 'confirmedQuantity'
+  sortDir?: 'asc' | 'desc'
+}
+
 export type CreateGiftInput = {
   eventId: number
   name: string
@@ -120,11 +133,32 @@ export class GiftRepository {
     this.repository = this.dataSource.getRepository(Gift)
   }
 
-  async findPublicByEventCode(eventCode: string): Promise<GiftListByEventResult> {
+  async findPublicByEventCode(
+    eventCode: string,
+    filters: GiftPublicListFilters = {}
+  ): Promise<GiftListByEventResult> {
+    const joinConditions = ['gift.event_id = event.id']
+    const queryParams: Record<string, unknown> = { eventCode }
+
+    if (filters.search) {
+      joinConditions.push(
+        '(gift.name ILIKE :search OR gift.description ILIKE :search OR gift.marketplace ILIKE :search)'
+      )
+      queryParams.search = `%${filters.search}%`
+    }
+
+    if (filters.marketplace) {
+      joinConditions.push('gift.marketplace = :marketplace')
+      queryParams.marketplace = filters.marketplace
+    }
+
+    const sortByColumn = this.resolvePublicSortColumn(filters.sortBy)
+    const sortDir = filters.sortDir?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC'
+
     const rows = await this.dataSource
       .getRepository(Event)
       .createQueryBuilder('event')
-      .leftJoin(Gift, 'gift', 'gift.event_id = event.id')
+      .leftJoin(Gift, 'gift', joinConditions.join(' AND '), queryParams)
       .select([
         'event.id AS event_id',
         'gift.id AS gift_id',
@@ -139,7 +173,8 @@ export class GiftRepository {
         'gift.sort_order AS gift_sort_order',
       ])
       .where('event.code = :eventCode', { eventCode })
-      .orderBy('gift.sort_order', 'ASC')
+      .orderBy('gift.is_blocked', 'ASC', 'NULLS LAST')
+      .addOrderBy(sortByColumn, sortDir as 'ASC' | 'DESC', 'NULLS LAST')
       .addOrderBy('gift.id', 'ASC')
       .getRawMany<GiftListRawRow>()
 
@@ -163,6 +198,24 @@ export class GiftRepository {
       }))
 
     return { eventFound: true, gifts }
+  }
+
+  private resolvePublicSortColumn(sortBy?: GiftPublicListFilters['sortBy']): string {
+    switch (sortBy) {
+      case 'name':
+        return 'gift.name'
+      case 'description':
+        return 'gift.description'
+      case 'marketplace':
+        return 'gift.marketplace'
+      case 'maxQuantity':
+        return 'gift.max_quantity'
+      case 'confirmedQuantity':
+        return 'gift.confirmed_quantity'
+      case 'sortOrder':
+      default:
+        return 'gift.sort_order'
+    }
   }
 
   async findAdminByEventId(eventId: number): Promise<GiftAdminProjection[]> {
