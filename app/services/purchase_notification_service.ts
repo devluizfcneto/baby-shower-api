@@ -1,5 +1,6 @@
 import { inject } from '@adonisjs/core'
 
+import { DateTimeFormatterService } from '#services/date_time_formatter_service'
 import { MailDispatcherService } from '#services/mail_dispatcher_service'
 
 type PurchaseNotificationPayload = {
@@ -17,9 +18,14 @@ type PurchaseNotificationPayload = {
 
 @inject()
 export class PurchaseNotificationService {
-  constructor(private readonly mailDispatcherService: MailDispatcherService) {}
+  constructor(
+    private readonly mailDispatcherService: MailDispatcherService,
+    private readonly dateTimeFormatterService: DateTimeFormatterService
+  ) {}
 
   async sendGuestPurchaseConfirmation(payload: PurchaseNotificationPayload) {
+    const confirmedAtText = this.dateTimeFormatterService.formatForEndUser(payload.confirmedAt)
+
     await this.mailDispatcherService.sendLater({
       to: payload.guestEmail,
       subject: `Agradecimento pela lembranca: ${payload.giftName}`,
@@ -29,12 +35,14 @@ export class PurchaseNotificationService {
         eventName: payload.eventName ?? 'Nosso evento',
         giftName: payload.giftName,
         quantity: payload.quantity,
+        confirmedAtText,
       },
       text: this.buildGuestPurchaseConfirmationText({
         guestName: payload.guestName,
         eventName: payload.eventName ?? 'Nosso evento',
         giftName: payload.giftName,
         quantity: payload.quantity,
+        confirmedAtText,
       }),
     })
   }
@@ -43,6 +51,8 @@ export class PurchaseNotificationService {
     if (!payload.adminEmail) {
       return
     }
+
+    const confirmedAtText = this.dateTimeFormatterService.formatForEndUser(payload.confirmedAt)
 
     await this.mailDispatcherService.sendLater({
       to: payload.adminEmail,
@@ -55,6 +65,7 @@ export class PurchaseNotificationService {
         guestEmail: payload.guestEmail,
         quantity: payload.quantity,
         notes: payload.notes,
+        confirmedAtText,
       },
       text: this.buildAdminPurchaseNotificationText({
         eventName: payload.eventName ?? 'N/D',
@@ -63,6 +74,7 @@ export class PurchaseNotificationService {
         guestEmail: payload.guestEmail,
         quantity: payload.quantity,
         notes: payload.notes,
+        confirmedAtText,
       }),
     })
   }
@@ -72,6 +84,7 @@ export class PurchaseNotificationService {
     eventName: string
     giftName: string
     quantity: number
+    confirmedAtText: string
   }): string {
     return [
       'Lembranca confirmada',
@@ -80,6 +93,7 @@ export class PurchaseNotificationService {
       `Recebemos a confirmacao da sua compra para ${input.eventName}.`,
       `Produto: ${input.giftName}`,
       `Quantidade: ${input.quantity}`,
+      `Confirmado em: ${input.confirmedAtText}`,
       '',
       'Os responsaveis agradecem pelo carinho e pela lembranca especial.',
     ].join('\n')
@@ -92,6 +106,7 @@ export class PurchaseNotificationService {
     guestEmail: string
     quantity: number
     notes: string | null
+    confirmedAtText: string
   }): string {
     return [
       'Nova confirmacao de compra',
@@ -100,6 +115,7 @@ export class PurchaseNotificationService {
       `Convidado: ${input.guestName} (${input.guestEmail})`,
       `Produto: ${input.giftName}`,
       `Quantidade: ${input.quantity}`,
+      `Confirmado em: ${input.confirmedAtText}`,
       `Mensagem de carinho: ${input.notes ?? 'Nao informada'}`,
     ].join('\n')
   }

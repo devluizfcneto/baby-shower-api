@@ -1,5 +1,6 @@
 import { inject } from '@adonisjs/core'
 
+import { DateTimeFormatterService } from '#services/date_time_formatter_service'
 import { MailDispatcherService } from '#services/mail_dispatcher_service'
 
 type RsvpNotificationPayload = {
@@ -18,11 +19,14 @@ type RsvpNotificationPayload = {
 
 @inject()
 export class RsvpNotificationService {
-  constructor(private readonly mailDispatcherService: MailDispatcherService) {}
+  constructor(
+    private readonly mailDispatcherService: MailDispatcherService,
+    private readonly dateTimeFormatterService: DateTimeFormatterService
+  ) {}
 
   async sendGuestConfirmation(payload: RsvpNotificationPayload) {
     const eventStartText = payload.eventStartAt
-      ? this.formatEventStart(payload.eventStartAt)
+      ? this.formatDateForEndUser(payload.eventStartAt)
       : 'Horario a confirmar'
     const eventLocationText = payload.eventVenueAddress?.trim() || 'Local a confirmar'
 
@@ -52,11 +56,13 @@ export class RsvpNotificationService {
       return
     }
 
+    const confirmedAtText = this.formatDateForEndUser(payload.confirmedAt)
+
     await this.mailDispatcherService.sendLater({
       to: payload.adminEmail,
       subject: 'Nova confirmacao de presenca',
-      html: `<h1>Novo RSVP</h1><p>Convidado: ${payload.guestFullName} (${payload.guestEmail})</p><p>Acompanhantes: ${payload.companions.length}</p>`,
-      text: `Novo RSVP\n\nConvidado: ${payload.guestFullName} (${payload.guestEmail})\nAcompanhantes: ${payload.companions.length}`,
+      html: `<h1>Novo RSVP</h1><p>Convidado: ${payload.guestFullName} (${payload.guestEmail})</p><p>Acompanhantes: ${payload.companions.length}</p><p>Confirmado em: ${confirmedAtText}</p>`,
+      text: `Novo RSVP\n\nConvidado: ${payload.guestFullName} (${payload.guestEmail})\nAcompanhantes: ${payload.companions.length}\nConfirmado em: ${confirmedAtText}`,
     })
   }
 
@@ -65,7 +71,7 @@ export class RsvpNotificationService {
     companion: RsvpNotificationPayload['companions'][number]
   ) {
     const eventStartText = payload.eventStartAt
-      ? this.formatEventStart(payload.eventStartAt)
+      ? this.formatDateForEndUser(payload.eventStartAt)
       : 'Horario a confirmar'
     const eventLocationText = payload.eventVenueAddress?.trim() || 'Local a confirmar'
 
@@ -90,11 +96,8 @@ export class RsvpNotificationService {
     })
   }
 
-  private formatEventStart(date: Date): string {
-    return new Intl.DateTimeFormat('pt-BR', {
-      dateStyle: 'full',
-      timeStyle: 'short',
-    }).format(date)
+  private formatDateForEndUser(date: Date): string {
+    return this.dateTimeFormatterService.formatForEndUser(date)
   }
 
   private buildGuestConfirmationText(input: {
