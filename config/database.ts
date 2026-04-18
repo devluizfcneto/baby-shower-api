@@ -19,6 +19,11 @@ const databaseConfig: DataSourceOptions = {
   username: env.get('DB_USER'),
   password: env.get('DB_PASSWORD'),
   database: env.get('DB_NAME'),
+  ssl: env.get('DB_SSL')
+    ? {
+        rejectUnauthorized: env.get('DB_SSL_REJECT_UNAUTHORIZED') ?? false,
+      }
+    : false,
   synchronize: false,
   logging: env.get('DB_LOGGING'),
   entities: [User, Event, UserSession, Guest, Companion, Gift, PurchaseConfirmation, Donation],
