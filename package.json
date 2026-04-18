@@ -1,9 +1,12 @@
 {
   "name": "baby-shower-api",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "license": "UNLICENSED",
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "scripts": {
     "start": "node bin/server.js",
     "build": "node ace build",
@@ -42,7 +45,6 @@
     "#config/*": "./config/*.js"
   },
   "devDependencies": {
-    "@adonisjs/assembler": "^8.3.0",
     "@adonisjs/eslint-config": "^3.0.0",
     "@adonisjs/prettier-config": "^1.4.5",
     "@adonisjs/tsconfig": "^2.0.0",
@@ -50,7 +52,6 @@
     "@japa/assert": "^4.2.0",
     "@japa/plugin-adonisjs": "^5.2.0",
     "@japa/runner": "^5.3.0",
-    "@poppinss/ts-exec": "^1.4.4",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.5.0",
     "eslint": "^10.1.0",
@@ -60,8 +61,10 @@
     "typescript": "~5.9.3"
   },
   "dependencies": {
+    "@adonisjs/assembler": "^8.3.0",
     "@adonisjs/core": "^7.3.0",
     "@adonisjs/mail": "^10.2.0",
+    "@poppinss/ts-exec": "^1.4.4",
     "@vinejs/vine": "^4.3.0",
     "edge.js": "^6.5.0",
     "jsonwebtoken": "^9.0.3",
