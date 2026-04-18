@@ -66,6 +66,21 @@ export type UpdateGiftInput = Partial<Omit<CreateGiftInput, 'eventId'>> & {
   isBlocked?: boolean
 }
 
+export type CreateGiftImportInput = {
+  eventId: number
+  name: string
+  description: string
+  imageUrl: string | null
+  marketplaceUrl: string
+  marketplace: 'amazon' | 'mercadolivre' | 'shopee'
+  maxQuantity: number
+  confirmedQuantity: number
+  isBlocked: boolean
+  createdAt: Date
+  updatedAt: Date
+  sortOrder: number
+}
+
 type GiftAdminRaw = {
   id: number | string
   event_id?: number | string
@@ -240,6 +255,58 @@ export class GiftRepository {
     }
 
     return created
+  }
+
+  async createManyGifts(input: CreateGiftImportInput[]): Promise<number> {
+    if (input.length === 0) {
+      return 0
+    }
+
+    await this.dataSource.transaction(async (manager) => {
+      const chunkSize = 500
+
+      for (let index = 0; index < input.length; index += chunkSize) {
+        const chunk = input.slice(index, index + chunkSize)
+
+        await manager
+          .createQueryBuilder()
+          .insert()
+          .into(Gift)
+          .values(
+            chunk.map((row) => ({
+              eventId: row.eventId,
+              name: row.name,
+              description: row.description,
+              imageUrl: row.imageUrl,
+              marketplaceUrl: row.marketplaceUrl,
+              marketplace: row.marketplace,
+              asin: null,
+              affiliateLinkAmazon: null,
+              affiliateLinkMl: null,
+              affiliateLinkShopee: null,
+              maxQuantity: row.maxQuantity,
+              confirmedQuantity: row.confirmedQuantity,
+              isBlocked: row.isBlocked,
+              sortOrder: row.sortOrder,
+              createdAt: row.createdAt,
+              updatedAt: row.updatedAt,
+            }))
+          )
+          .execute()
+      }
+    })
+
+    return input.length
+  }
+
+  async findMaxSortOrderByEventId(eventId: number): Promise<number> {
+    const raw = await this.repository
+      .createQueryBuilder('gift')
+      .select('COALESCE(MAX(gift.sort_order), 0)', 'maxSortOrder')
+      .where('gift.event_id = :eventId', { eventId })
+      .getRawOne<{ maxSortOrder?: number | string }>()
+
+    return Number(raw?.maxSortOrder ?? 0)
   }
 
   async updateGiftById(

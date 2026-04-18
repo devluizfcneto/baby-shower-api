@@ -36,6 +36,7 @@ test.group('AdminGiftService', () => {
           },
         ],
       } as any,
+      {} as any,
       new GiftPayloadMapperService(),
       new InputSanitizerService()
     )
@@ -74,6 +75,7 @@ test.group('AdminGiftService', () => {
           updatedAt: new Date('2026-04-10T10:00:00.000Z'),
         }),
       } as any,
+      {} as any,
       new GiftPayloadMapperService(),
       new InputSanitizerService()
     )
@@ -114,6 +116,7 @@ test.group('AdminGiftService', () => {
           updatedAt: new Date('2026-04-10T10:00:00.000Z'),
         }),
       } as any,
+      {} as any,
       new GiftPayloadMapperService(),
       new InputSanitizerService()
     )
@@ -150,6 +153,7 @@ test.group('AdminGiftService', () => {
           updatedAt: new Date('2026-04-10T10:00:00.000Z'),
         }),
       } as any,
+      {} as any,
       new GiftPayloadMapperService(),
       new InputSanitizerService()
     )
@@ -186,6 +190,7 @@ test.group('AdminGiftService', () => {
         }),
         hasPurchaseConfirmations: async () => true,
       } as any,
+      {} as any,
       new GiftPayloadMapperService(),
       new InputSanitizerService()
     )
@@ -204,6 +209,7 @@ test.group('AdminGiftService', () => {
       {
         findById: async () => null,
       } as any,
+      {} as any,
       new GiftPayloadMapperService(),
       new InputSanitizerService()
     )

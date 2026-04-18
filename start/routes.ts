@@ -97,6 +97,7 @@ router
         router
           .get('/export/purchases', [AdminExportController, 'purchases'])
           .as('adminExport.purchases')
+        router.post('/gifts/import', [AdminGiftController, 'import']).as('adminGift.import')
         router.post('/gifts', [AdminGiftController, 'store']).as('adminGift.store')
         router.put('/gifts/:id', [AdminGiftController, 'update']).as('adminGift.update')
         router

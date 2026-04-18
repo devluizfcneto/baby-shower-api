@@ -14,10 +14,15 @@ import {
 import { validationError } from '#exceptions/error_factory'
 import { EventRepository } from '#repositories/event_repository'
 import {
+  type CreateGiftImportInput,
   GiftRepository,
   type CreateGiftInput,
   type UpdateGiftInput,
 } from '#repositories/gift_repository'
+import {
+  GiftImportParserService,
+  type ParsedGiftImportRow,
+} from '#services/gift_import_parser_service'
 import { GiftPayloadMapperService } from '#services/gift_payload_mapper_service'
 import { InputSanitizerService } from '#services/input_sanitizer_service'
 
@@ -49,11 +54,26 @@ type CreateAdminGiftPayload = {
 
 type UpdateAdminGiftPayload = Partial<CreateAdminGiftPayload>
 
+type ImportAdminGiftPayload = {
+  fileBase64: string
+  fileName?: string
+  fileType?: 'csv' | 'xlsx'
+}
+
+type AdminGiftImportResponse = {
+  data: {
+    eventId: number
+    importedCount: number
+    source: 'file'
+  }
+}
+
 @inject()
 export class AdminGiftService {
   constructor(
     private readonly eventRepository: EventRepository,
     private readonly giftRepository: GiftRepository,
+    private readonly giftImportParserService: GiftImportParserService,
     private readonly giftPayloadMapperService: GiftPayloadMapperService,
     private readonly inputSanitizerService: InputSanitizerService
   ) {}
@@ -275,6 +295,45 @@ export class AdminGiftService {
     }
   }
 
+  async importFromBase64(
+    eventId: number,
+    payload: ImportAdminGiftPayload
+  ): Promise<AdminGiftImportResponse> {
+    const parsedRows = this.giftImportParserService.parse({
+      fileBase64: payload.fileBase64,
+      fileName: payload.fileName,
+      fileType: payload.fileType,
+    })
+
+    const maxSortOrder = await this.giftRepository.findMaxSortOrderByEventId(eventId)
+
+    const importRows = parsedRows.map((row, index) =>
+      this.normalizeImportPayloadRow({
+        row,
+        eventId,
+        sortOrder: maxSortOrder + index + 1,
+      })
+    )
+
+    try {
+      const importedCount = await this.giftRepository.createManyGifts(importRows)
+
+      return {
+        data: {
+          eventId,
+          importedCount,
+          source: 'file',
+        },
+      }
+    } catch (error) {
+      if (this.isPersistenceError(error)) {
+        throw new GiftCreateFailedException()
+      }
+
+      throw error
+    }
+  }
+
   private normalizeCreatePayload(
     payload: CreateAdminGiftPayload,
     eventId: number
@@ -335,6 +394,27 @@ export class AdminGiftService {
           : undefined,
       maxQuantity: payload.maxQuantity,
       sortOrder: payload.sortOrder,
+    }
+  }
+
+  private normalizeImportPayloadRow(input: {
+    row: ParsedGiftImportRow
+    eventId: number
+    sortOrder: number
+  }): CreateGiftImportInput {
+    return {
+      eventId: input.eventId,
+      name: this.inputSanitizerService.normalizeRequiredText(input.row.name),
+      description: this.inputSanitizerService.normalizeRequiredText(input.row.description),
+      imageUrl: this.inputSanitizerService.normalizeOptionalText(input.row.imageUrl),
+      marketplaceUrl: this.inputSanitizerService.normalizeRequiredText(input.row.marketplaceUrl),
+      marketplace: input.row.marketplace,
+      maxQuantity: input.row.maxQuantity,
+      confirmedQuantity: input.row.confirmedQuantity,
+      isBlocked: input.row.isBlocked,
+      createdAt: input.row.createdAt,
+      updatedAt: input.row.updatedAt,
+      sortOrder: input.sortOrder,
     }
   }
 

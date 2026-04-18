@@ -6,6 +6,7 @@ import { adminGiftBlockValidator } from '#validators/admin_gift_block_validator'
 import { adminGiftCreateValidator } from '#validators/admin_gift_create_validator'
 import { adminEventIdParamValidator } from '#validators/admin_event_id_param_validator'
 import { adminGiftIdParamValidator } from '#validators/admin_gift_id_param_validator'
+import { adminGiftImportValidator } from '#validators/admin_gift_import_validator'
 import { adminGiftUpdateValidator } from '#validators/admin_gift_update_validator'
 
 @inject()
@@ -34,6 +35,19 @@ export default class AdminGiftController {
       affiliateLinkShopee: body.affiliateLinkShopee,
       maxQuantity: body.maxQuantity,
       sortOrder: body.sortOrder,
+    })
+
+    return response.created(payload)
+  }
+
+  async import({ request, response }: HttpContext) {
+    const { eventId } = await adminEventIdParamValidator.validate(request.params())
+    const body = await adminGiftImportValidator.validate(request.all())
+
+    const payload = await this.adminGiftService.importFromBase64(eventId, {
+      fileBase64: body.fileBase64,
+      fileName: body.fileName,
+      fileType: body.fileType,
     })
 
     return response.created(payload)
