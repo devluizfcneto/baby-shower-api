@@ -66,8 +66,8 @@ type NormalizedInput = {
 @inject()
 export class AdminGuestService {
   private static readonly DEFAULT_PAGE = 1
-  private static readonly DEFAULT_PER_PAGE = 20
-  private static readonly MAX_PER_PAGE = 100
+  private static readonly DEFAULT_PER_PAGE = 50
+  private static readonly MAX_PER_PAGE = 200
   private static readonly DEFAULT_SORT_BY: AdminGuestSortBy = 'confirmedAt'
   private static readonly DEFAULT_SORT_DIR: AdminGuestSortDir = 'desc'
 
