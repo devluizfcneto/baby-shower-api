@@ -18,7 +18,7 @@ export default class RsvpController {
       email: payload.email,
       companions: (payload.companions ?? []).map((companion) => ({
         fullName: companion.fullName,
-        email: companion.email,
+        email: companion.email ?? '',
       })),
     })
 

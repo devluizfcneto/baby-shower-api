@@ -185,7 +185,7 @@ export class RsvpService {
   private normalizeInput(input: ConfirmPresenceInput): ConfirmPresenceInput {
     const companions: CompanionCreateInput[] = input.companions.map((companion) => ({
       fullName: this.inputSanitizerService.normalizeRequiredText(companion.fullName),
-      email: this.inputSanitizerService.normalizeEmail(companion.email),
+      email: this.inputSanitizerService.normalizeEmail(companion.email ?? ''),
     }))
 
     return {
