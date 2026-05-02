@@ -23,7 +23,7 @@ export default class PurchaseConfirmationController {
       giftId,
       {
         guestName: payload.guestName,
-        guestEmail: payload.guestEmail,
+        guestEmail: payload.guestEmail || '',
         quantity: payload.quantity,
         orderNumber: payload.orderNumber,
         notes: payload.notes,

@@ -17,7 +17,7 @@ import { PurchaseNotificationService } from '#services/purchase_notification_ser
 
 type ConfirmPurchaseInput = {
   guestName: string
-  guestEmail: string
+  guestEmail?: string | null
   quantity?: number
   orderNumber?: string
   notes?: string
@@ -243,7 +243,7 @@ export class PurchaseConfirmationService {
   private normalizeInput(input: ConfirmPurchaseInput): ConfirmPurchaseNormalizedInput {
     return {
       guestName: this.inputSanitizerService.normalizeRequiredText(input.guestName),
-      guestEmail: this.inputSanitizerService.normalizeEmail(input.guestEmail),
+      guestEmail: this.inputSanitizerService.normalizeEmail(input.guestEmail ?? ''),
       quantity: input.quantity ?? 1,
       orderNumber: this.inputSanitizerService.normalizeOptionalText(input.orderNumber),
       notes: this.inputSanitizerService.normalizeOptionalText(input.notes),

@@ -9,6 +9,7 @@ export class InputSanitizerService {
   }
 
   normalizeEmail(value: string): string {
+    if (!value) return ''
     return value.trim().toLowerCase()
   }
 
