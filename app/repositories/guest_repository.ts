@@ -16,6 +16,13 @@ export type GuestCreateResult = {
   confirmedAt: Date
 }
 
+export type GuestByEmailProjection = {
+  id: number
+  fullName: string
+  email: string
+  confirmedAt: Date
+}
+
 export type AdminGuestSortBy = 'confirmedAt' | 'fullName' | 'email'
 export type AdminGuestSortDir = 'asc' | 'desc'
 
@@ -112,6 +119,29 @@ export class GuestRepository {
       fullName: row.full_name ?? row.fullName ?? input.fullName,
       email: row.email,
       confirmedAt,
+    }
+  }
+
+  async findByEventAndEmail(
+    eventId: number,
+    email: string
+  ): Promise<GuestByEmailProjection | null> {
+    const row = await this.repository
+      .createQueryBuilder('guest')
+      .select(['guest.id', 'guest.fullName', 'guest.email', 'guest.confirmedAt'])
+      .where('guest.eventId = :eventId', { eventId })
+      .andWhere('LOWER(guest.email) = LOWER(:email)', { email })
+      .getOne()
+
+    if (!row) {
+      return null
+    }
+
+    return {
+      id: row.id,
+      fullName: row.fullName,
+      email: row.email,
+      confirmedAt: row.confirmedAt,
     }
   }
 

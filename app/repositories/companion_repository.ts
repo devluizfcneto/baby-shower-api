@@ -5,7 +5,7 @@ import { AppDataSource } from '#services/database_service'
 
 type CompanionInput = {
   fullName: string
-  email: string
+  email: string | null
 }
 
 export type CompanionCreateInput = CompanionInput
@@ -26,40 +26,59 @@ export class CompanionRepository {
     }
 
     const activeRepository = manager ? manager.getRepository(Companion) : this.repository
-    const emails = companions.map((companion) => companion.email)
+    const emails = companions
+      .map((companion) => companion.email?.trim().toLowerCase())
+      .filter((email): email is string => Boolean(email))
 
-    const existingRows = await activeRepository.query(
-      `
-      SELECT LOWER(companion.email) AS email
-      FROM companions companion
-      WHERE companion.event_id = $1
-        AND LOWER(companion.email) = ANY($2)
-      UNION
-      SELECT LOWER(guest.email) AS email
-      FROM guests guest
-      WHERE guest.event_id = $1
-        AND LOWER(guest.email) = ANY($2)
-      `,
-      [eventId, emails.map((email) => email.toLowerCase())]
-    )
+    const existingEmails = new Set<string>()
 
-    const existingEmails = new Set(
-      (existingRows as Array<{ email?: string | null }>)
-        .map((row) => row.email)
-        .filter((email): email is string => Boolean(email))
-    )
+    if (emails.length > 0) {
+      const existingRows = await activeRepository.query(
+        `
+        SELECT LOWER(companion.email) AS email
+        FROM companions companion
+        WHERE companion.event_id = $1
+          AND companion.email IS NOT NULL
+          AND LOWER(companion.email) = ANY($2)
+        UNION
+        SELECT LOWER(guest.email) AS email
+        FROM guests guest
+        WHERE guest.event_id = $1
+          AND LOWER(guest.email) = ANY($2)
+        `,
+        [eventId, emails]
+      )
+
+      for (const row of existingRows as Array<{ email?: string | null }>) {
+        if (row.email) {
+          existingEmails.add(row.email)
+        }
+      }
+    }
 
     const uniqueCompanions: CompanionInput[] = []
     const seenEmails = new Set<string>()
+    const seenNames = new Set<string>()
 
     for (const companion of companions) {
-      const normalizedEmail = companion.email.toLowerCase()
-      if (existingEmails.has(normalizedEmail) || seenEmails.has(normalizedEmail)) {
+      const normalizedName = companion.fullName.trim().toLowerCase()
+      const normalizedEmail = companion.email?.trim().toLowerCase() ?? null
+
+      if (normalizedEmail) {
+        if (existingEmails.has(normalizedEmail) || seenEmails.has(normalizedEmail)) {
+          continue
+        }
+
+        seenEmails.add(normalizedEmail)
+      } else if (seenNames.has(normalizedName)) {
         continue
       }
 
-      seenEmails.add(normalizedEmail)
-      uniqueCompanions.push(companion)
+      seenNames.add(normalizedName)
+      uniqueCompanions.push({
+        fullName: companion.fullName,
+        email: normalizedEmail,
+      })
     }
 
     if (uniqueCompanions.length === 0) {
@@ -81,5 +100,24 @@ export class CompanionRepository {
       .execute()
 
     return uniqueCompanions
+  }
+
+  async findByGuestId(
+    guestId: number,
+    manager?: EntityManager
+  ): Promise<Array<{ id: number; fullName: string; email: string | null }>> {
+    const activeRepository = manager ? manager.getRepository(Companion) : this.repository
+
+    const rows = await activeRepository
+      .createQueryBuilder('companion')
+      .select(['companion.id', 'companion.fullName', 'companion.email'])
+      .where('companion.guestId = :guestId', { guestId })
+      .getMany()
+
+    return rows.map((row) => ({
+      id: row.id,
+      fullName: row.fullName,
+      email: row.email,
+    }))
   }
 }

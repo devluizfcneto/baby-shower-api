@@ -12,7 +12,7 @@ type RsvpNotificationPayload = {
   guestEmail: string
   companions: Array<{
     fullName: string
-    email: string
+    email?: string | null
   }>
   confirmedAt: Date
 }
@@ -107,12 +107,16 @@ export class RsvpNotificationService {
     eventLocationText: string
     companions: Array<{
       fullName: string
-      email: string
+      email?: string | null
     }>
   }): string {
     const companionsLines =
       input.companions.length > 0
-        ? input.companions.map((companion) => `- ${companion.fullName} <${companion.email}>`)
+        ? input.companions.map((companion) =>
+            companion.email
+              ? `- ${companion.fullName} <${companion.email}>`
+              : `- ${companion.fullName}`
+          )
         : ['- Nenhum acompanhante informado']
 
     return [

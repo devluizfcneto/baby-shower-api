@@ -21,8 +21,19 @@ type ConfirmPresenceInput = {
   email: string
   companions: Array<{
     fullName: string
-    email: string
+    email?: string | null
   }>
+}
+
+type NormalizedCompanionInput = {
+  fullName: string
+  email: string | null
+}
+
+type NormalizedConfirmPresenceInput = {
+  fullName: string
+  email: string
+  companions: NormalizedCompanionInput[]
 }
 
 type ConfirmPresenceResponse = {
@@ -72,55 +83,119 @@ export class RsvpService {
       throw new RsvpEventUnavailableException()
     }
 
-    const alreadyConfirmed = await this.guestRepository.existsByEventAndEmail(
-      eventContext.id,
-      normalizedInput.email
-    )
-    if (alreadyConfirmed) {
-      throw new RsvpAlreadyConfirmedException()
-    }
-
     try {
-      const { guest: createdGuest, insertedCompanions } = await AppDataSource.transaction(
-        async (manager) => {
-          const guest = await this.guestRepository.createGuest(
-            {
-              eventId: eventContext.id,
-              fullName: normalizedInput.fullName,
-              email: normalizedInput.email,
-            },
-            manager
-          )
-
-          const companions = await this.companionRepository.createManyByGuestId(
-            eventContext.id,
-            guest.id,
-            normalizedInput.companions,
-            manager
-          )
-
-          return { guest, insertedCompanions: companions }
-        }
+      const existingGuest = await this.guestRepository.findByEventAndEmail(
+        eventContext.id,
+        normalizedInput.email
       )
+
+      if (!existingGuest) {
+        const alreadyConfirmed = await this.guestRepository.existsByEventAndEmail(
+          eventContext.id,
+          normalizedInput.email
+        )
+        if (alreadyConfirmed) {
+          throw new RsvpAlreadyConfirmedException()
+        }
+
+        const { guest: createdGuest, insertedCompanions } = await AppDataSource.transaction(
+          async (manager) => {
+            const guest = await this.guestRepository.createGuest(
+              {
+                eventId: eventContext.id,
+                fullName: normalizedInput.fullName,
+                email: normalizedInput.email,
+              },
+              manager
+            )
+
+            const companions = await this.companionRepository.createManyByGuestId(
+              eventContext.id,
+              guest.id,
+              normalizedInput.companions,
+              manager
+            )
+
+            return { guest, insertedCompanions: companions }
+          }
+        )
+
+        await this.dispatchNotificationsBestEffort({
+          eventName: eventContext.name,
+          eventStartAt: eventContext.date,
+          eventVenueAddress: eventContext.venueAddress,
+          adminEmail: eventContext.adminEmail,
+          guestFullName: createdGuest.fullName,
+          guestEmail: createdGuest.email,
+          companions: insertedCompanions,
+          confirmedAt: createdGuest.confirmedAt,
+          includeAdmin: true,
+        })
+
+        return {
+          data: {
+            guestId: createdGuest.id,
+            fullName: createdGuest.fullName,
+            email: createdGuest.email,
+            companionsCount: insertedCompanions.length,
+            confirmedAt: createdGuest.confirmedAt.toISOString(),
+          },
+          meta: {
+            emailDispatch: 'queued_or_best_effort',
+          },
+        }
+      }
+
+      const existingCompanions = await this.companionRepository.findByGuestId(existingGuest.id)
+      const newCompanions = this.filterNewCompanions(
+        normalizedInput.companions,
+        existingCompanions
+      )
+
+      const availableSlots = RsvpService.MAX_COMPANIONS_PER_GUEST - existingCompanions.length
+      if (newCompanions.length > availableSlots) {
+        throw validationError([
+          {
+            code: ErrorCode.UNPROCESSABLE_ENTITY,
+            field: 'companions',
+            message: 'A maximum of 2 companions is allowed',
+          },
+        ])
+      }
+
+      const insertedCompanions =
+        newCompanions.length > 0
+          ? await AppDataSource.transaction(async (manager) =>
+              this.companionRepository.createManyByGuestId(
+                eventContext.id,
+                existingGuest.id,
+                newCompanions,
+                manager
+              )
+            )
+          : []
+
+      const totalCompanionsCount = existingCompanions.length + insertedCompanions.length
 
       await this.dispatchNotificationsBestEffort({
         eventName: eventContext.name,
         eventStartAt: eventContext.date,
         eventVenueAddress: eventContext.venueAddress,
         adminEmail: eventContext.adminEmail,
-        guestFullName: createdGuest.fullName,
-        guestEmail: createdGuest.email,
-        companions: insertedCompanions,
-        confirmedAt: createdGuest.confirmedAt,
+        guestFullName: existingGuest.fullName,
+        guestEmail: existingGuest.email,
+        companions: normalizedInput.companions,
+        confirmedAt: existingGuest.confirmedAt,
+        includeAdmin: insertedCompanions.length > 0,
       })
 
       return {
         data: {
-          guestId: createdGuest.id,
-          fullName: createdGuest.fullName,
-          email: createdGuest.email,
-          companionsCount: insertedCompanions.length,
-          confirmedAt: createdGuest.confirmedAt.toISOString(),
+          guestId: existingGuest.id,
+          fullName: existingGuest.fullName,
+          email: existingGuest.email,
+          companionsCount: totalCompanionsCount,
+          confirmedAt: existingGuest.confirmedAt.toISOString(),
         },
         meta: {
           emailDispatch: 'queued_or_best_effort',
@@ -148,24 +223,46 @@ export class RsvpService {
     guestEmail: string
     companions: Array<{
       fullName: string
-      email: string
+      email?: string | null
     }>
     confirmedAt: Date
+    includeAdmin?: boolean
   }) {
-    await this.bestEffortNotificationService.dispatch('rsvp_notification', [
-      {
+    const tasks = [] as Array<{ label: string; execute: () => Promise<void> }>
+
+    if (payload.guestEmail) {
+      tasks.push({
         label: 'guest_confirmation',
         execute: () => this.notificationService.sendGuestConfirmation(payload),
-      },
-      {
+      })
+    }
+
+    if (payload.includeAdmin && payload.adminEmail) {
+      tasks.push({
         label: 'admin_notification',
         execute: () => this.notificationService.sendAdminNotification(payload),
-      },
-      ...payload.companions.map((companion) => ({
+      })
+    }
+
+    for (const companion of payload.companions) {
+      if (!companion.email) {
+        continue
+      }
+
+      tasks.push({
         label: `companion_confirmation:${companion.email}`,
-        execute: () => this.notificationService.sendCompanionConfirmation(payload, companion),
-      })),
-    ])
+        execute: () => this.notificationService.sendCompanionConfirmation(payload, {
+          fullName: companion.fullName,
+          email: companion.email,
+        }),
+      })
+    }
+
+    if (tasks.length === 0) {
+      return
+    }
+
+    await this.bestEffortNotificationService.dispatch('rsvp_notification', tasks)
   }
 
   private isUniqueViolation(error: unknown): boolean {
@@ -182,10 +279,10 @@ export class RsvpService {
     return false
   }
 
-  private normalizeInput(input: ConfirmPresenceInput): ConfirmPresenceInput {
+  private normalizeInput(input: ConfirmPresenceInput): NormalizedConfirmPresenceInput {
     const companions: CompanionCreateInput[] = input.companions.map((companion) => ({
       fullName: this.inputSanitizerService.normalizeRequiredText(companion.fullName),
-      email: this.inputSanitizerService.normalizeEmail(companion.email ?? ''),
+      email: this.inputSanitizerService.normalizeOptionalEmail(companion.email),
     }))
 
     return {
@@ -193,5 +290,50 @@ export class RsvpService {
       email: this.inputSanitizerService.normalizeEmail(input.email),
       companions,
     }
+  }
+
+  private filterNewCompanions(
+    incoming: NormalizedCompanionInput[],
+    existing: Array<{ fullName: string; email: string | null }>
+  ): NormalizedCompanionInput[] {
+    if (incoming.length === 0) {
+      return []
+    }
+
+    const existingEmails = new Set(
+      existing
+        .map((companion) => companion.email?.trim().toLowerCase())
+        .filter((email): email is string => Boolean(email))
+    )
+
+    const existingNames = new Set(
+      existing.map((companion) => companion.fullName.trim().toLowerCase())
+    )
+
+    const uniqueByEmail = new Set<string>()
+    const uniqueByName = new Set<string>()
+    const result: NormalizedCompanionInput[] = []
+
+    for (const companion of incoming) {
+      const normalizedName = companion.fullName.trim().toLowerCase()
+      const normalizedEmail = companion.email?.trim().toLowerCase() ?? null
+
+      if (normalizedEmail) {
+        if (existingEmails.has(normalizedEmail) || uniqueByEmail.has(normalizedEmail)) {
+          continue
+        }
+        uniqueByEmail.add(normalizedEmail)
+      } else if (existingNames.has(normalizedName) || uniqueByName.has(normalizedName)) {
+        continue
+      }
+
+      uniqueByName.add(normalizedName)
+      result.push({
+        fullName: companion.fullName,
+        email: companion.email,
+      })
+    }
+
+    return result
   }
 }
