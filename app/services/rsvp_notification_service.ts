@@ -68,7 +68,7 @@ export class RsvpNotificationService {
 
   async sendCompanionConfirmation(
     payload: RsvpNotificationPayload,
-    companion: RsvpNotificationPayload['companions'][number]
+    companion: { fullName: string; email: string }
   ) {
     const eventStartText = payload.eventStartAt
       ? this.formatDateForEndUser(payload.eventStartAt)

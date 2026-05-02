@@ -128,6 +128,12 @@ export class RsvpService {
           guestFullName: createdGuest.fullName,
           guestEmail: createdGuest.email,
           companions: insertedCompanions,
+          companionRecipients: insertedCompanions
+            .filter((companion) => Boolean(companion.email))
+            .map((companion) => ({
+              fullName: companion.fullName,
+              email: companion.email as string,
+            })),
           confirmedAt: createdGuest.confirmedAt,
           includeAdmin: true,
         })
@@ -147,10 +153,7 @@ export class RsvpService {
       }
 
       const existingCompanions = await this.companionRepository.findByGuestId(existingGuest.id)
-      const newCompanions = this.filterNewCompanions(
-        normalizedInput.companions,
-        existingCompanions
-      )
+      const newCompanions = this.filterNewCompanions(normalizedInput.companions, existingCompanions)
 
       const availableSlots = RsvpService.MAX_COMPANIONS_PER_GUEST - existingCompanions.length
       if (newCompanions.length > availableSlots) {
@@ -175,7 +178,8 @@ export class RsvpService {
             )
           : []
 
-      const totalCompanionsCount = existingCompanions.length + insertedCompanions.length
+      const allCompanions = [...existingCompanions, ...insertedCompanions]
+      const totalCompanionsCount = allCompanions.length
 
       await this.dispatchNotificationsBestEffort({
         eventName: eventContext.name,
@@ -184,7 +188,13 @@ export class RsvpService {
         adminEmail: eventContext.adminEmail,
         guestFullName: existingGuest.fullName,
         guestEmail: existingGuest.email,
-        companions: normalizedInput.companions,
+        companions: allCompanions,
+        companionRecipients: insertedCompanions
+          .filter((companion) => Boolean(companion.email))
+          .map((companion) => ({
+            fullName: companion.fullName,
+            email: companion.email as string,
+          })),
         confirmedAt: existingGuest.confirmedAt,
         includeAdmin: insertedCompanions.length > 0,
       })
@@ -225,6 +235,10 @@ export class RsvpService {
       fullName: string
       email?: string | null
     }>
+    companionRecipients?: Array<{
+      fullName: string
+      email: string
+    }>
     confirmedAt: Date
     includeAdmin?: boolean
   }) {
@@ -244,17 +258,21 @@ export class RsvpService {
       })
     }
 
-    for (const companion of payload.companions) {
-      if (!companion.email) {
+    const companionRecipients = payload.companionRecipients ?? payload.companions
+
+    for (const companion of companionRecipients) {
+      const email = companion.email
+      if (typeof email !== 'string' || email.length === 0) {
         continue
       }
 
       tasks.push({
-        label: `companion_confirmation:${companion.email}`,
-        execute: () => this.notificationService.sendCompanionConfirmation(payload, {
-          fullName: companion.fullName,
-          email: companion.email,
-        }),
+        label: `companion_confirmation:${email}`,
+        execute: () =>
+          this.notificationService.sendCompanionConfirmation(payload, {
+            fullName: companion.fullName,
+            email,
+          }),
       })
     }
 
