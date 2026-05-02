@@ -173,7 +173,8 @@ export class GiftRepository {
         'gift.sort_order AS gift_sort_order',
       ])
       .where('event.code = :eventCode', { eventCode })
-      .orderBy('gift.is_blocked', 'ASC', 'NULLS LAST')
+      .andWhere('gift.confirmed_quantity != gift.max_quantity')
+      .andWhere('gift.is_blocked = false')
       .addOrderBy(sortByColumn, sortDir as 'ASC' | 'DESC', 'NULLS LAST')
       .addOrderBy('gift.id', 'ASC')
       .getRawMany<GiftListRawRow>()
