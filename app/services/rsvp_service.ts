@@ -180,6 +180,11 @@ export class RsvpService {
 
       const allCompanions = [...existingCompanions, ...insertedCompanions]
       const totalCompanionsCount = allCompanions.length
+      const companionRecipients = this.resolveCompanionRecipients(
+        normalizedInput.companions,
+        existingCompanions,
+        insertedCompanions
+      )
 
       await this.dispatchNotificationsBestEffort({
         eventName: eventContext.name,
@@ -189,12 +194,7 @@ export class RsvpService {
         guestFullName: existingGuest.fullName,
         guestEmail: existingGuest.email,
         companions: allCompanions,
-        companionRecipients: insertedCompanions
-          .filter((companion) => Boolean(companion.email))
-          .map((companion) => ({
-            fullName: companion.fullName,
-            email: companion.email as string,
-          })),
+        companionRecipients,
         confirmedAt: existingGuest.confirmedAt,
         includeAdmin: insertedCompanions.length > 0,
       })
@@ -353,5 +353,57 @@ export class RsvpService {
     }
 
     return result
+  }
+
+  private resolveCompanionRecipients(
+    incoming: NormalizedCompanionInput[],
+    existing: Array<{ fullName: string; email: string | null }>,
+    inserted: Array<{ fullName: string; email: string | null }>
+  ): Array<{ fullName: string; email: string }> {
+    if (incoming.length === 0) {
+      return []
+    }
+
+    const existingByEmail = new Map(
+      existing
+        .filter((companion) => Boolean(companion.email))
+        .map((companion) => [companion.email?.trim().toLowerCase() ?? '', companion])
+    )
+    const existingByName = new Map(
+      existing.map((companion) => [companion.fullName.trim().toLowerCase(), companion])
+    )
+    const insertedByEmail = new Map(
+      inserted
+        .filter((companion) => Boolean(companion.email))
+        .map((companion) => [companion.email?.trim().toLowerCase() ?? '', companion])
+    )
+    const insertedByName = new Map(
+      inserted.map((companion) => [companion.fullName.trim().toLowerCase(), companion])
+    )
+
+    const recipients: Array<{ fullName: string; email: string }> = []
+    const seenEmails = new Set<string>()
+
+    for (const companion of incoming) {
+      const normalizedEmail = companion.email?.trim().toLowerCase() ?? null
+      const normalizedName = companion.fullName.trim().toLowerCase()
+
+      const match = normalizedEmail
+        ? (existingByEmail.get(normalizedEmail) ?? insertedByEmail.get(normalizedEmail))
+        : (existingByName.get(normalizedName) ?? insertedByName.get(normalizedName))
+
+      const email = match?.email?.trim().toLowerCase()
+      if (!email || seenEmails.has(email)) {
+        continue
+      }
+
+      seenEmails.add(email)
+      recipients.push({
+        fullName: match?.fullName ?? companion.fullName,
+        email: match?.email ?? email,
+      })
+    }
+
+    return recipients
   }
 }
